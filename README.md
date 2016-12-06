@@ -35,6 +35,18 @@ wp static-page urls
 wp static-page save [--replace-from=<from>] [--replace-to=<to>]
 ```
 
+**List all assets that Static Page knows about**
+
+```bash
+wp static-page assets
+```
+
+**Save all assets out**
+
+```bash
+wp static-page save-assets
+```
+
 ### Configuration
 
 Static Page is meant to be require little configuration, in the case than you _do_ need to configure this, you can use
@@ -54,5 +66,16 @@ add_filter( 'static_page_site_urls', function ( $urls ) {
 ```php
 add_filter( 'static_page_replace_urls_in_content', function ( $page_markup ) {
 	return str_replace( site_url(), 'https://my-cdn.example.com/', $page_markup );
+});
+```
+
+**Add / remove assets directories to be copied on `save-assets`**
+
+All files of type `jpg`, `css`, `js`, `png`, `gif` will be copied from the directories.
+
+```php
+add_filter( 'static_page_assets_dirs', function ( $dirs ) {
+	$dirs[] = plugin_dir( 'akismet' );
+	return $dirs;
 });
 ```
