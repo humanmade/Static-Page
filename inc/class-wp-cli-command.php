@@ -27,6 +27,13 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	}
 
 	/**
+	 * Get all the assets that would be saved to static pages.
+	 */
+	public function assets() {
+		echo implode( "\n", get_assets() );
+	}
+
+	/**
 	 * Save the contents to disk (or the destination directory).
 	 *
 	 * @synopsis [--url=<url>] [--replace-from=<from>] [--replace-to=<to>]
@@ -57,5 +64,19 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		}, $contents, $urls );
 
 		$progress->finish();
+	}
+
+	/**
+	 * @subcommand save-assets
+	 */
+	public function save_assets() {
+
+		$assets = get_assets();
+		$progress = WP_CLI\Utils\make_progress_bar( 'Saving assets', count( $assets ) );
+
+		array_map( function( $path ) use ( $progress ) {
+			$progress->tick();
+			copy_asset( $path );
+		}, $assets );
 	}
 }

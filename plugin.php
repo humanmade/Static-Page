@@ -7,10 +7,30 @@
 */
 
 namespace Static_Page;
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
+use RegexIterator;
+use RecursiveRegexIterator;
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
 	\WP_CLI::add_command( 'static-page', __NAMESPACE__ . '\\WP_CLI_Command' );
+}
+
+add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
+add_action( 'static_page_export', __NAMESPACE__ . '\\export_site' );
+
+function queue_export() {
+	if ( ! wp_next_scheduled( 'static_page_export' ) ) {
+		wp_schedule_single_event( time() + 5, 'static_page_export' );
+	}
+}
+
+function export_site() {
+	$urls = get_site_urls();
+	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
+	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
+	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls );
 }
 
 /**
@@ -77,4 +97,40 @@ function save_contents_for_url( $contents, $url ) {
 	});
 	file_put_contents( $path, $contents );
 	remove_filter( 's3_uploads_putObject_params', $func );
+}
+
+function copy_asset( $path ) {
+	$dir = wp_upload_dir()['basedir'] . '/static-page';
+	if ( ! is_dir( $dir ) ) {
+		mkdir( $dir );
+	}
+
+	$destination = str_replace( ABSPATH, $dir . '/', $path );
+	$destination = str_replace( WP_CONTENT_DIR, $dir . '/', $destination );
+
+	copy( $path, $destination );
+}
+
+/**
+ * Get all the static assets on the site that should be copied.
+ *
+ * @return string[]
+ */
+function get_assets() {
+	$assets = array();
+	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js)$/i';
+	$dirs = [ get_stylesheet_directory(), ABSPATH . WPINC ];
+	$dirs = apply_filters( 'static_page_assets_dirs', $dirs );
+
+	foreach( $dirs as $dir ) {
+		$directory = new RecursiveDirectoryIterator( $dir );
+		$iterator = new RecursiveIteratorIterator( $directory );
+		$regex = new RegexIterator( $iterator, $asset_regex, RecursiveRegexIterator::GET_MATCH );
+
+		foreach ( $regex as $filename => $r ) {
+			$assets[] = $filename;
+		}
+	}
+
+	return $assets;
 }
