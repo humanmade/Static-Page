@@ -43,7 +43,7 @@ the following hooks:
 **Add / remove URLs that are generate**
 
 ```php
-add_filter( 'static_page_site_urls', function( $urls ) {
+add_filter( 'static_page_site_urls', function ( $urls ) {
 	$urls[] = site_url( '/my-hidden-url/' );
 	return $urls;
 });
@@ -52,7 +52,7 @@ add_filter( 'static_page_site_urls', function( $urls ) {
 **Make custom URL replacements on the contents of pages**
 
 ```php
-add_filter( 'static_page_replace_urls_in_content', function( $page_markup ) {
+add_filter( 'static_page_replace_urls_in_content', function ( $page_markup ) {
 	return str_replace( site_url(), 'https://my-cdn.example.com/', $page_markup );
 });
 ```
