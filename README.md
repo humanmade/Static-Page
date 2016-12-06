@@ -40,7 +40,7 @@ wp static-page save [--replace-from=<from>] [--replace-to=<to>]
 Static Page is meant to be require little configuration, in the case than you _do_ need to configure this, you can use
 the following hooks:
 
-**Add / remove URLs that are generate**
+**Add / remove URLs that are generated**
 
 ```php
 add_filter( 'static_page_site_urls', function ( $urls ) {
