@@ -36,10 +36,10 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Save the contents to disk (or the destination directory).
 	 *
-	 * @synopsis [--url=<url>] [--replace-from=<from>] [--replace-to=<to>]
+	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>]
 	 */
 	public function save( $args, $args_assoc ) {
-		$urls = ! empty( $args_assoc['url'] ) ? [ $args_assoc['url'] ] : get_site_urls();
+		$urls = ! empty( $args_assoc['page-url'] ) ? [ $args_assoc['page-url'] ] : get_site_urls();
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Fetching pages', count( $urls ) );
 		$contents = array_map( function( $url ) use ( $progress ) {
@@ -58,6 +58,12 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving pages', count( $urls ) );
+
+		if ( ! empty( $args[0] ) ) {
+			add_filter( 'static_page_destination_directory', function( $dir ) use ( $args ) {
+				return realpath( $args[0] );
+			});
+		}
 		array_map( function( $content, $url ) use ( $progress ) {
 			$progress->tick();
 			save_contents_for_url( $content, $url );
@@ -67,12 +73,18 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * @subcommand save-assets
+	 * @subcommand save-assets [<path>]
 	 */
-	public function save_assets() {
+	public function save_assets( $args, $args_assoc ) {
 
 		$assets = get_assets();
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving assets', count( $assets ) );
+
+		if ( ! empty( $args[0] ) ) {
+			add_filter( 'static_page_destination_directory', function( $dir ) use ( $args ) {
+				return realpath( $args[0] );
+			});
+		}
 
 		array_map( function( $path ) use ( $progress ) {
 			$progress->tick();

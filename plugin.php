@@ -78,6 +78,11 @@ function replace_urls( $content ) {
 	return $content;
 }
 
+function get_destination_directory() {
+	$dir = wp_upload_dir()['basedir'] . '/static-page';
+	return untrailingslashit( apply_filters( 'static_page_destination_directory', $dir ) );
+}
+
 /**
  * Save the contents of a url to the static page destination.
  *
@@ -85,7 +90,7 @@ function replace_urls( $content ) {
  * @param  string $url
  */
 function save_contents_for_url( $contents, $url ) {
-	$dir = wp_upload_dir()['basedir'] . '/static-page';
+	$dir = get_destination_directory();
 	if ( ! is_dir( $dir ) ) {
 		mkdir( $dir );
 	}
@@ -95,19 +100,32 @@ function save_contents_for_url( $contents, $url ) {
 		$params['ContentType'] = 'text/html';
 		return $params;
 	});
+
+	// if the url looks to be a direcotry, create it and then call the file index.html
+	if ( substr( $path, -1 ) === '/' ) {
+		wp_mkdir_p( $path );
+		$path = $path . 'index.html';
+	} else {
+		wp_mkdir_p( dirname( $path ) );
+	}
+
 	file_put_contents( $path, $contents );
 	remove_filter( 's3_uploads_putObject_params', $func );
 }
 
 function copy_asset( $path ) {
-	$dir = wp_upload_dir()['basedir'] . '/static-page';
+	$dir = get_destination_directory();
 	if ( ! is_dir( $dir ) ) {
 		mkdir( $dir );
 	}
 
-	$destination = str_replace( ABSPATH, $dir . '/', $path );
-	$destination = str_replace( WP_CONTENT_DIR, $dir . '/', $destination );
 
+	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
+		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
+	} else {
+		$destination = str_replace( ABSPATH, $dir . '/', $path );
+	}
+	wp_mkdir_p( dirname( $destination ) );
 	copy( $path, $destination );
 }
 
