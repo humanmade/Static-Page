@@ -8,7 +8,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Get the contents of a URL that would be used for a statis page.
 	 *
-	 * @synopsis <url> [--replace-from=<from>] [--replace-to=<to>]
+	 * @synopsis [<url>] [--replace-from=<from>] [--replace-to=<to>]
 	 */
 	public function output( $args, $args_assoc ) {
 		if ( ! empty( $args_assoc['replace-from'] ) ) {
@@ -16,7 +16,12 @@ class WP_CLI_Command extends \WP_CLI_Command {
 				return str_replace( $args_assoc['replace-from'], $args_assoc['replace-to'], $contents );
 			});
 		}
-		echo replace_urls( get_url_contents( $args[0] ) );
+
+		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls();
+
+		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
+
+		print_r( $contents );
 	}
 
 	/**
@@ -61,7 +66,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 
 		if ( ! empty( $args[0] ) ) {
 			add_filter( 'static_page_destination_directory', function( $dir ) use ( $args ) {
-				return realpath( $args[0] );
+				return $args[0];
 			});
 		}
 		array_map( function( $content, $url ) use ( $progress ) {
