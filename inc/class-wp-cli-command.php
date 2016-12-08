@@ -42,7 +42,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Save the contents to disk (or the destination directory).
 	 *
-	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>]
+	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>] [--verbose]
 	 */
 	public function save( $args, $args_assoc ) {
 		$urls = ! empty( $args_assoc['page-url'] ) ? [ $args_assoc['page-url'] ] : get_site_urls();
@@ -70,8 +70,11 @@ class WP_CLI_Command extends \WP_CLI_Command {
 				return $args[0];
 			});
 		}
-		array_map( function( $content, $url ) use ( $progress ) {
+		array_map( function( $content, $url ) use ( $progress, $args_assoc ) {
 			$progress->tick();
+			if ( ! empty( $args_assoc['verbose'] ) ) {
+				WP_CLI::line( 'Saving ' . $url );
+			}
 			save_contents_for_url( $content, $url );
 		}, $contents, $urls );
 
@@ -79,9 +82,17 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * @subcommand save-assets [<path>]
+	 * @subcommand save-assets [<path>] [--include=<whitelist-regex>] [--verbose]
 	 */
 	public function save_assets( $args, $args_assoc ) {
+
+		if ( ! empty( $args_assoc['include'] ) ) {
+			add_filter( 'static_page_assets', function( $assets ) use ( $args_assoc ) {
+				return array_filter( $assets, function( $asset ) use ( $args_assoc ) {
+					return preg_match( '#' . $args_assoc['include'] . '#', $asset );
+				});
+			});
+		}
 
 		$assets = get_assets();
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving assets', count( $assets ) );
@@ -92,8 +103,11 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			});
 		}
 
-		array_map( function( $path ) use ( $progress ) {
+		array_map( function( $path ) use ( $progress, $args_assoc ) {
 			$progress->tick();
+			if ( ! empty( $args_assoc['verbose'] ) ) {
+				WP_CLI::line( 'Copying ' . $path );
+			}
 			copy_asset( $path );
 		}, $assets );
 	}
