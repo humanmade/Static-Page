@@ -20,6 +20,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls();
 
 		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
+		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
 
 		print_r( $contents );
 	}

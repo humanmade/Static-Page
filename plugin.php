@@ -126,6 +126,9 @@ function copy_asset( $path ) {
 		$destination = str_replace( ABSPATH, $dir . '/', $path );
 	}
 	wp_mkdir_p( dirname( $destination ) );
+
+	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
+
 	copy( $path, $destination );
 }
 
@@ -136,7 +139,7 @@ function copy_asset( $path ) {
  */
 function get_assets() {
 	$assets = array();
-	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js)$/i';
+	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg)$/i';
 	$dirs = [ get_stylesheet_directory(), ABSPATH . WPINC ];
 	$dirs = apply_filters( 'static_page_assets_dirs', $dirs );
 
