@@ -69,7 +69,9 @@ function get_site_urls() {
  */
 function get_url_contents( $url ) {
 	// for now we just do a loop back
-	$response = wp_remote_get( $url );
+	$url = apply_filters( 'static_page_get_url_contents_request_url', $url );
+	$args = apply_filters( 'static_page_get_url_contents_request_args', array() );
+	$response = wp_remote_get( $url, $args );
 	return wp_remote_retrieve_body( $response );
 }
 
