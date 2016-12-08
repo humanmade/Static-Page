@@ -150,5 +150,5 @@ function get_assets() {
 		}
 	}
 
-	return $assets;
+	return apply_filters( 'static_page_assets', $assets );
 }
