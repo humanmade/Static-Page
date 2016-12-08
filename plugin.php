@@ -61,6 +61,20 @@ function get_site_urls() {
 	return apply_filters( 'static_page_site_urls', $urls );
 }
 
+add_action( 'template_redirect', function() {
+	ob_start( function( $output ) {
+
+	});
+	var_dump( 'started');
+} );
+
+add_action( 'shutdown', function() {
+	ob_get_clean();
+	$url = esc_url( $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+	echo get_url_contents( $url );
+	exit;
+});
+//
 /**
  * Get the page contents of a URL.
  *
@@ -68,9 +82,64 @@ function get_site_urls() {
  * @return string
  */
 function get_url_contents( $url ) {
-	// for now we just do a loop back
-	$response = wp_remote_get( $url );
-	return wp_remote_retrieve_body( $response );
+	// note: the WP and WP_Query classes like to silently fetch parameters
+	// from all over the place (globals, GET, etc), which makes it tricky
+	// to run them more than once without very carefully clearing everything
+	$_GET = $_POST = array();
+	foreach ( array( 'query_string', 'id', 'postdata', 'authordata', 'day', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages', 'pagenow') as $v) {
+		if ( isset( $GLOBALS[$v] ) ) unset( $GLOBALS[$v] );
+	}
+	$parts = parse_url($url);
+	if (isset($parts['scheme'])) {
+		$req = $parts['path'];
+		if (isset($parts['query'])) {
+			$req .= '?' . $parts['query'];
+			// parse the url query vars into $_GET
+			parse_str( $parts['query'], $_GET );
+		}
+	} else {
+		$req = $url;
+	}
+	if ( ! isset( $parts['query'] ) ) {
+		$parts['query'] = '';
+	}
+
+	$_SERVER['REQUEST_URI'] = $req;
+	unset($_SERVER['PATH_INFO']);
+
+	unset($GLOBALS['wp_query'], $GLOBALS['wp_the_query']);
+	$GLOBALS['wp_the_query'] = new \WP_Query();
+	$GLOBALS['wp_query'] = $GLOBALS['wp_the_query'];
+	$GLOBALS['wp'] = new \WP();
+	_cleanup_query_vars();
+
+	$GLOBALS['wp']->main($parts['query']);
+
+	if ( ! defined( 'WP_USE_THEMES' ) ) {
+		define( 'WP_USE_THEMES', true );
+	}
+	ob_start();
+	require ABSPATH . WPINC . '/template-loader.php';
+	return ob_get_clean();
+}
+
+function _cleanup_query_vars() {
+	// clean out globals to stop them polluting wp and wp_query
+	foreach ( $GLOBALS['wp']->public_query_vars as $v )
+		unset( $GLOBALS[$v] );
+
+	foreach ( $GLOBALS['wp']->private_query_vars as $v )
+		unset( $GLOBALS[$v] );
+
+	foreach ( get_taxonomies( array() , 'objects' ) as $t ) {
+		if ( ! empty( $t->query_var ) )
+			$GLOBALS['wp']->add_query_var( $t->query_var );
+	}
+
+	foreach ( get_post_types( array() , 'objects' ) as $t ) {
+		if ( ! empty( $t->query_var ) )
+			$GLOBALS['wp']->add_query_var( $t->query_var );
+	}
 }
 
 function replace_urls( $content ) {
