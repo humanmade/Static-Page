@@ -18,19 +18,31 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 }
 
 add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
-add_action( 'static_page_export', __NAMESPACE__ . '\\export_site' );
+add_action( 'static_page_save', __NAMESPACE__ . '\\save_site' );
+add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
 function queue_export() {
-	if ( ! wp_next_scheduled( 'static_page_export' ) ) {
-		wp_schedule_single_event( time() + 5, 'static_page_export' );
+	if ( ! wp_next_scheduled( 'static_page_save' ) ) {
+		wp_schedule_single_event( time() + 5, 'static_page_save' );
 	}
 }
 
-function export_site() {
+function save_site() {
 	$urls = get_site_urls();
 	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
 	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
 	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls );
+}
+
+function show_save_admin_notice() {
+	if ( ! wp_next_scheduled( 'static_page_save' ) ) {
+		return;
+	}
+	?>
+	<div class="notice notice-success">
+		<p><?php _e( 'Saving site to NetStorage is currently in progress.', 'static-page' ); ?></p>
+	</div>
+	<?php
 }
 
 /**
