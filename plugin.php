@@ -125,6 +125,9 @@ function save_contents_for_url( $contents, $url ) {
 
 	file_put_contents( $path, $contents );
 	remove_filter( 's3_uploads_putObject_params', $func );
+
+	// Handy if we want to do a cache expiry.
+	do_action( 'static_page_saved_contents_for_url', $path );
 }
 
 function copy_asset( $path ) {
