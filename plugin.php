@@ -149,6 +149,23 @@ function copy_asset( $path ) {
 	copy( $path, $destination );
 }
 
+function delete_asset( $path ) {
+	$dir = get_destination_directory();
+	if ( ! is_dir( $dir ) ) {
+		return;
+	}
+
+	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
+		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
+	} else {
+		$destination = str_replace( ABSPATH, $dir . '/', $path );
+	}
+
+	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
+
+	unlink( $destination );
+}
+
 /**
  * Get all the static assets on the site that should be copied.
  *
