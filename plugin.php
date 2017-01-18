@@ -136,7 +136,6 @@ function copy_asset( $path ) {
 		mkdir( $dir );
 	}
 
-
 	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
 		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
 	} else {
@@ -149,11 +148,10 @@ function copy_asset( $path ) {
 	copy( $path, $destination );
 }
 
-function delete_asset( $path ) {
+function delete_asset( $url ) {
 	$dir = get_destination_directory();
-	if ( ! is_dir( $dir ) ) {
-		return;
-	}
+
+	$path = $dir . parse_url( $url, PHP_URL_PATH );
 
 	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
 		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
