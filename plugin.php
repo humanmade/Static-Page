@@ -136,7 +136,6 @@ function copy_asset( $path ) {
 		mkdir( $dir );
 	}
 
-
 	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
 		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
 	} else {
@@ -147,6 +146,22 @@ function copy_asset( $path ) {
 	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
 
 	copy( $path, $destination );
+}
+
+function delete_asset( $url ) {
+	$dir = get_destination_directory();
+
+	$path = $dir . parse_url( $url, PHP_URL_PATH );
+
+	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
+		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
+	} else {
+		$destination = str_replace( ABSPATH, $dir . '/', $path );
+	}
+
+	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
+
+	unlink( $destination );
 }
 
 /**
