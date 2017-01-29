@@ -130,6 +130,9 @@ function save_contents_for_url( $contents, $url ) {
 	file_put_contents( $path, $contents );
 
 	remove_filter( 's3_uploads_putObject_params', $func );
+
+	// Handy if we want to do a cache expiry.
+	do_action( 'static_page_saved_contents_for_url', $path );
 }
 
 function copy_asset( $path ) {
@@ -146,6 +149,22 @@ function copy_asset( $path ) {
 		mkdir( dirname( $destination ), 0755, true );
 	}
 	copy( $path, $destination );
+}
+
+function delete_asset( $url ) {
+	$dir = get_destination_directory();
+
+	$path = $dir . parse_url( $url, PHP_URL_PATH );
+
+	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
+		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
+	} else {
+		$destination = str_replace( ABSPATH, $dir . '/', $path );
+	}
+
+	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
+
+	unlink( $destination );
 }
 
 /**
