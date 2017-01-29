@@ -108,7 +108,7 @@ function save_contents_for_url( $contents, $url ) {
 	if ( ! is_dir( $dir ) ) {
 		mkdir( $dir, 0755, true );
 	}
-	$path =  $dir . parse_url( $url, PHP_URL_PATH );
+	$path = $dir . str_replace( site_url(), '', $url );
 
 	add_filter( 's3_uploads_putObject_params', $func = function( $params ) {
 		$params['ContentType'] = 'text/html';
@@ -155,11 +155,11 @@ function copy_asset( $path ) {
  */
 function get_assets() {
 	$assets = array();
-	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg)$/i';
+	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg|\.json)$/i';
 	$dirs = [ get_stylesheet_directory(), ABSPATH . WPINC ];
 	$dirs = apply_filters( 'static_page_assets_dirs', $dirs );
 
-	foreach( $dirs as $dir ) {
+	foreach ( $dirs as $dir ) {
 		$directory = new RecursiveDirectoryIterator( $dir );
 		$iterator = new RecursiveIteratorIterator( $directory );
 		$regex = new RegexIterator( $iterator, $asset_regex, RecursiveRegexIterator::GET_MATCH );
