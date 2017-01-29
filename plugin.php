@@ -66,7 +66,7 @@ function get_site_urls() {
 	$taxonomies = array_map( 'get_terms', $taxonomies );
 	$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
 		return array_merge( $all_terms, $terms );
-	}, []) ;
+	}, [] );
 
 	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
 
