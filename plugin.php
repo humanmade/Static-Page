@@ -106,7 +106,7 @@ function get_destination_directory() {
 function save_contents_for_url( $contents, $url ) {
 	$dir = get_destination_directory();
 	if ( ! is_dir( $dir ) ) {
-		mkdir( $dir );
+		mkdir( $dir, 0755, true );
 	}
 	$path =  $dir . parse_url( $url, PHP_URL_PATH );
 
@@ -117,32 +117,34 @@ function save_contents_for_url( $contents, $url ) {
 
 	// if the url looks to be a direcotry, create it and then call the file index.html
 	if ( substr( $path, -1 ) === '/' ) {
-		wp_mkdir_p( $path );
+		if ( ! is_dir( $path ) ) {
+			mkdir( $path, 0755, true );
+		}
 		$path = $path . 'index.html';
 	} else {
-		wp_mkdir_p( dirname( $path ) );
+		if ( ! is_dir( dirname( $path ) ) ) {
+			mkdir( dirname( $path ), 0755, true );
+		}
 	}
 
 	file_put_contents( $path, $contents );
+
 	remove_filter( 's3_uploads_putObject_params', $func );
 }
 
 function copy_asset( $path ) {
 	$dir = get_destination_directory();
-	if ( ! is_dir( $dir ) ) {
-		mkdir( $dir );
-	}
-
 
 	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
 		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
 	} else {
 		$destination = str_replace( ABSPATH, $dir . '/', $path );
 	}
-	wp_mkdir_p( dirname( $destination ) );
 
 	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
-
+	if ( ! is_dir( dirname( $destination ) ) ) {
+		mkdir( dirname( $destination ), 0755, true );
+	}
 	copy( $path, $destination );
 }
 
