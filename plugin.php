@@ -185,7 +185,7 @@ function delete_asset( $url ) {
  */
 function get_assets() {
 	$assets = array();
-	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg)$/i';
+	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg|\.json)$/i';
 	$dirs = [ ABSPATH . WPINC ];
 	foreach ( wp_get_themes() as $theme ) {
 	    $dirs[] = $theme->get_stylesheet_directory();
