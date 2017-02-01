@@ -172,10 +172,13 @@ function delete_asset( $url ) {
 function get_assets() {
 	$assets = array();
 	$asset_regex = '/^.+(\.jpe?g|\.png|\.gif|\.css|\.ico|\.js|\.woff|\.ttf|\.svg)$/i';
-	$dirs = [ get_stylesheet_directory(), ABSPATH . WPINC ];
+	$dirs = [ ABSPATH . WPINC ];
+	foreach ( wp_get_themes() as $theme ) {
+	    $dirs[] = $theme->get_stylesheet_directory();
+	}
 	$dirs = apply_filters( 'static_page_assets_dirs', $dirs );
 
-	foreach( $dirs as $dir ) {
+	foreach ( $dirs as $dir ) {
 		$directory = new RecursiveDirectoryIterator( $dir );
 		$iterator = new RecursiveIteratorIterator( $directory );
 		$regex = new RegexIterator( $iterator, $asset_regex, RecursiveRegexIterator::GET_MATCH );
