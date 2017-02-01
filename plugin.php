@@ -66,7 +66,7 @@ function get_site_urls() {
 	$taxonomies = array_map( 'get_terms', $taxonomies );
 	$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
 		return array_merge( $all_terms, $terms );
-	}, []) ;
+	}, [] );
 
 	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
 
@@ -77,24 +77,28 @@ function get_site_urls() {
  * Get the page contents of a URL.
  *
  * @param  string $url
+ * @param  mixed  $config Option config object that will be passed to filters etc.
  * @return string
  */
-function get_url_contents( $url ) {
+function get_url_contents( $url, $config = null ) {
 	// for now we just do a loop back
-	$url = apply_filters( 'static_page_get_url_contents_request_url', $url );
-	$args = apply_filters( 'static_page_get_url_contents_request_args', array() );
+	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
+	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
 	$response = wp_remote_get( $url, $args );
 	return wp_remote_retrieve_body( $response );
 }
 
-function replace_urls( $content ) {
-	$content = apply_filters( 'static_page_replace_urls_in_content', $content );
+function replace_urls( $content, $config = null ) {
+	$content = apply_filters( 'static_page_replace_urls_in_content', $content, $config );
 	return $content;
 }
 
-function get_destination_directory() {
+/**
+ * @param  mixed  $config Option config object that will be passed to filters etc.
+ */
+function get_destination_directory( $config = null ) {
 	$dir = wp_upload_dir()['basedir'] . '/static-page';
-	return untrailingslashit( apply_filters( 'static_page_destination_directory', $dir ) );
+	return untrailingslashit( apply_filters( 'static_page_destination_directory', $dir, $config ) );
 }
 
 /**
@@ -102,13 +106,14 @@ function get_destination_directory() {
  *
  * @param  string $contents
  * @param  string $url
+ * @param  mixed  $config Option config object that will be passed to filters etc.
  */
-function save_contents_for_url( $contents, $url ) {
-	$dir = get_destination_directory();
+function save_contents_for_url( $contents, $url, $config = null ) {
+	$dir = get_destination_directory( $config );
 	if ( ! is_dir( $dir ) ) {
-		mkdir( $dir );
+		mkdir( $dir, 0755, true );
 	}
-	$path =  $dir . parse_url( $url, PHP_URL_PATH );
+	$path = $dir . str_replace( site_url(), '', $url );
 
 	add_filter( 's3_uploads_putObject_params', $func = function( $params ) {
 		$params['ContentType'] = 'text/html';
@@ -117,34 +122,43 @@ function save_contents_for_url( $contents, $url ) {
 
 	// if the url looks to be a direcotry, create it and then call the file index.html
 	if ( substr( $path, -1 ) === '/' ) {
-		wp_mkdir_p( $path );
+		if ( ! is_dir( $path ) ) {
+			mkdir( $path, 0755, true );
+		}
 		$path = $path . 'index.html';
 	} else {
-		wp_mkdir_p( dirname( $path ) );
+		if ( ! is_dir( dirname( $path ) ) ) {
+			mkdir( dirname( $path ), 0755, true );
+		}
 	}
 
 	file_put_contents( $path, $contents );
+
 	remove_filter( 's3_uploads_putObject_params', $func );
 
 	// Handy if we want to do a cache expiry.
-	do_action( 'static_page_saved_contents_for_url', $path );
+	do_action( 'static_page_saved_contents_for_url', $path, $config );
 }
 
-function copy_asset( $path ) {
-	$dir = get_destination_directory();
-	if ( ! is_dir( $dir ) ) {
-		mkdir( $dir );
-	}
+/**
+ * Copy an asset to the static page destination.
+ *
+ * @param  string $path
+ * @param  mixed  $config Option config object that will be passed to filters etc.
+ */
+function copy_asset( $path, $config = null ) {
+	$dir = get_destination_directory( $config );
 
 	if ( strpos( WP_CONTENT_DIR, ABSPATH ) === false ) {
 		$destination = str_replace( dirname( ABSPATH ), $dir, $path );
 	} else {
 		$destination = str_replace( ABSPATH, $dir . '/', $path );
 	}
-	wp_mkdir_p( dirname( $destination ) );
 
-	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path );
-
+	$destination = apply_filters( 'static_page_copy_asset_destination', $destination, $path, $config );
+	if ( ! is_dir( dirname( $destination ) ) ) {
+		mkdir( dirname( $destination ), 0755, true );
+	}
 	copy( $path, $destination );
 }
 

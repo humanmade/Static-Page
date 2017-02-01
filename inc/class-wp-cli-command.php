@@ -8,7 +8,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Get the contents of a URL that would be used for a statis page.
 	 *
-	 * @synopsis [<url>] [--replace-from=<from>] [--replace-to=<to>]
+	 * @synopsis [<url>] [--replace-from=<from>] [--replace-to=<to>] [--config=<config>]
 	 */
 	public function output( $args, $args_assoc ) {
 		if ( ! empty( $args_assoc['replace-from'] ) ) {
@@ -27,29 +27,43 @@ class WP_CLI_Command extends \WP_CLI_Command {
 
 	/**
 	 * Get all the URLs that would be saved to static pages.
+	 *
+	 * @synopsis [--config=<config>]
 	 */
-	public function urls() {
-		echo implode( "\n", get_site_urls() );
+	public function urls( $args, $args_assoc ) {
+		$args_assoc = wp_parse_args( $args_assoc, array(
+			'config' => null,
+		));
+		echo implode( "\n", get_site_urls( $args_assoc['config'] ) );
 	}
 
 	/**
 	 * Get all the assets that would be saved to static pages.
+	 *
+	 * @synopsis [--config=<config>]
 	 */
-	public function assets() {
-		echo implode( "\n", get_assets() );
+	public function assets( $args, $args_assoc ) {
+		$args_assoc = wp_parse_args( $args_assoc, array(
+			'config' => null,
+		));
+		echo implode( "\n", get_assets( $args_assoc['config'] ) );
 	}
 
 	/**
 	 * Save the contents to disk (or the destination directory).
 	 *
-	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>] [--verbose]
+	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>] [--verbose] [--config=<config>]
 	 */
 	public function save( $args, $args_assoc ) {
+		$args_assoc = wp_parse_args( $args_assoc, array(
+			'config' => null,
+		));
+
 		$urls = ! empty( $args_assoc['page-url'] ) ? [ $args_assoc['page-url'] ] : get_site_urls();
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Fetching pages', count( $urls ) );
 		$contents = array_map( function( $url ) use ( $progress ) {
-			$contents = get_url_contents( $url );
+			$contents = get_url_contents( $url, $args_assoc['config'] );
 			$progress->tick();
 			return $contents;
 		}, $urls );
@@ -75,16 +89,19 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			if ( ! empty( $args_assoc['verbose'] ) ) {
 				WP_CLI::line( 'Saving ' . $url );
 			}
-			save_contents_for_url( $content, $url );
+			save_contents_for_url( $content, $url, $args_assoc['config'] );
 		}, $contents, $urls );
 
 		$progress->finish();
 	}
 
 	/**
-	 * @subcommand save-assets [<path>] [--include=<whitelist-regex>] [--verbose]
+	 * @subcommand save-assets [<path>] [--include=<whitelist-regex>] [--verbose] [--config=<config>]
 	 */
 	public function save_assets( $args, $args_assoc ) {
+		$args_assoc = wp_parse_args( $args_assoc, array(
+			'config' => null,
+		));
 
 		if ( ! empty( $args_assoc['include'] ) ) {
 			add_filter( 'static_page_assets', function( $assets ) use ( $args_assoc ) {
@@ -94,7 +111,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			});
 		}
 
-		$assets = get_assets();
+		$assets = get_assets( $args_assoc['config'] );
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving assets', count( $assets ) );
 
 		if ( ! empty( $args[0] ) ) {
@@ -108,7 +125,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			if ( ! empty( $args_assoc['verbose'] ) ) {
 				WP_CLI::line( 'Copying ' . $path );
 			}
-			copy_asset( $path );
+			copy_asset( $path, $args_assoc['config'] );
 		}, $assets );
 	}
 }
