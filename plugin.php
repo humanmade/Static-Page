@@ -21,17 +21,17 @@ add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
 add_action( 'static_page_save', __NAMESPACE__ . '\\save_site' );
 add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
-function queue_export() {
+function queue_export( $config = null ) {
 	if ( ! wp_next_scheduled( 'static_page_save' ) ) {
-		wp_schedule_single_event( time() + 5, 'static_page_save' );
+		wp_schedule_single_event( time() + 5, 'static_page_save', array( $config ) );
 	}
 }
 
-function save_site() {
+function save_site( $config = null ) {
 	$urls = get_site_urls();
-	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
-	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
-	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls );
+	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array_fill( 0, count( $urls ), $config ) );
+	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array_fill( 0, count( $urls ), $config ) );
+	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls, array_fill( 0, count( $urls ), $config ) );
 }
 
 function show_save_admin_notice() {
@@ -52,7 +52,7 @@ function show_save_admin_notice() {
  *
  * @return string[]
  */
-function get_site_urls() {
+function get_site_urls( $config = null ) {
 	$urls = [
 		site_url( '/' ),
 	];
@@ -70,7 +70,7 @@ function get_site_urls() {
 
 	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
 
-	return apply_filters( 'static_page_site_urls', $urls );
+	return apply_filters( 'static_page_site_urls', $urls, $config );
 }
 
 /**
@@ -138,6 +138,21 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 
 	// Handy if we want to do a cache expiry.
 	do_action( 'static_page_saved_contents_for_url', $path, $config );
+}
+
+function remove_url( $url, $config = null ) {
+	$dir = get_destination_directory( $config );
+	$path = $dir . str_replace( site_url(), '', $url );
+
+	// if the url looks to be a direcotry, create it and then call the file index.html
+	if ( substr( $path, -1 ) === '/' ) {
+		$path = $path . 'index.html';
+	}
+
+	unlink( $path );
+
+	// Handy if we want to do a cache expiry.
+	do_action( 'static_page_removed_url', $path, $config );
 }
 
 /**
