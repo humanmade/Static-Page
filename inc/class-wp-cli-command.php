@@ -8,7 +8,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Get the contents of a URL that would be used for a statis page.
 	 *
-	 * @synopsis [<url>] [--replace-from=<from>] [--replace-to=<to>] [--config=<config>]
+	 * @synopsis --config=<config> [<url>] [--replace-from=<from>] [--replace-to=<to>]
 	 */
 	public function output( $args, $args_assoc ) {
 		if ( ! empty( $args_assoc['replace-from'] ) ) {
@@ -17,10 +17,10 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			});
 		}
 
-		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls();
+		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls( $args_assoc['config'] );
 
-		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
-		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
+		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array( $args_assoc['config'] ) );
+		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array( $args_assoc['config'] ) );
 
 		print_r( $contents );
 	}
@@ -28,7 +28,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Get all the URLs that would be saved to static pages.
 	 *
-	 * @synopsis [--config=<config>]
+	 * @synopsis --config=<config>
 	 */
 	public function urls( $args, $args_assoc ) {
 		$args_assoc = wp_parse_args( $args_assoc, array(
@@ -40,7 +40,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Get all the assets that would be saved to static pages.
 	 *
-	 * @synopsis [--config=<config>]
+	 * @synopsis --config=<config>
 	 */
 	public function assets( $args, $args_assoc ) {
 		$args_assoc = wp_parse_args( $args_assoc, array(
@@ -52,17 +52,13 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	/**
 	 * Save the contents to disk (or the destination directory).
 	 *
-	 * @synopsis [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>] [--verbose] [--config=<config>]
+	 * @synopsis --config=<config> [<path>] [--page-url=<url>] [--replace-from=<from>] [--replace-to=<to>] [--verbose]
 	 */
 	public function save( $args, $args_assoc ) {
-		$args_assoc = wp_parse_args( $args_assoc, array(
-			'config' => null,
-		));
-
-		$urls = ! empty( $args_assoc['page-url'] ) ? [ $args_assoc['page-url'] ] : get_site_urls();
+		$urls = ! empty( $args_assoc['page-url'] ) ? [ $args_assoc['page-url'] ] : get_site_urls( $args_assoc['config'] );
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Fetching pages', count( $urls ) );
-		$contents = array_map( function( $url ) use ( $progress ) {
+		$contents = array_map( function( $url ) use ( $progress, $args_assoc ) {
 			$contents = get_url_contents( $url, $args_assoc['config'] );
 			$progress->tick();
 			return $contents;
@@ -75,7 +71,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			});
 		}
 
-		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents );
+		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array( $args_assoc['config'] ) );
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving pages', count( $urls ) );
 
@@ -96,13 +92,10 @@ class WP_CLI_Command extends \WP_CLI_Command {
 	}
 
 	/**
-	 * @subcommand save-assets [<path>] [--include=<whitelist-regex>] [--verbose] [--config=<config>]
+	 * @subcommand save-assets
+	 * @synopsis --config=<config> [<path>] [--include=<whitelist-regex>] [--verbose]
 	 */
 	public function save_assets( $args, $args_assoc ) {
-		$args_assoc = wp_parse_args( $args_assoc, array(
-			'config' => null,
-		));
-
 		if ( ! empty( $args_assoc['include'] ) ) {
 			add_filter( 'static_page_assets', function( $assets ) use ( $args_assoc ) {
 				return array_filter( $assets, function( $asset ) use ( $args_assoc ) {
