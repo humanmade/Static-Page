@@ -19,12 +19,12 @@ class WP_CLI_Command extends \WP_CLI_Command {
 
 		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls( $args_assoc['config'] );
 
-		foreach ( $urls as $url ) {
-			$contents = get_url_contents( $url, $args_assoc['config'] );
-			$contents = replace_urls( $contents, $args_assoc['config'] );
+		foreach ( $urls as &$url ) {
+			$url = get_url_contents( $url, $args_assoc['config'] );
+			$url = replace_urls( $url, $args_assoc['config'] );
 		}
 
-		print_r( $contents );
+		print_r( $urls );
 	}
 
 	/**
