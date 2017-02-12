@@ -19,10 +19,12 @@ class WP_CLI_Command extends \WP_CLI_Command {
 
 		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls( $args_assoc['config'] );
 
-		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array( $args_assoc['config'] ) );
-		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array( $args_assoc['config'] ) );
+		foreach ( $urls as &$url ) {
+			$url = get_url_contents( $url, $args_assoc['config'] );
+			$url = replace_urls( $url, $args_assoc['config'] );
+		}
 
-		print_r( $contents );
+		print_r( $urls );
 	}
 
 	/**
@@ -71,7 +73,9 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			});
 		}
 
-		$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array( $args_assoc['config'] ) );
+		foreach ( $contents as &$content ) {
+			$content = replace_urls( $content, $args_assoc['config'] );
+		}
 
 		$progress = WP_CLI\Utils\make_progress_bar( 'Saving pages', count( $urls ) );
 
