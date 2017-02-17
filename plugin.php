@@ -113,7 +113,11 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 	if ( ! is_dir( $dir ) ) {
 		mkdir( $dir, 0755, true );
 	}
-	$path = $dir . str_replace( site_url(), '', $url );
+
+	// Force HTTPS
+	$base_url = home_url( '', 'https' );
+	$url = set_url_scheme( $url, 'https' );
+	$path = $dir . str_replace( $base_url, '', $url );
 
 	add_filter( 's3_uploads_putObject_params', $func = function( $params ) {
 		$params['ContentType'] = 'text/html';
