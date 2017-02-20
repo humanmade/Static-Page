@@ -157,6 +157,10 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 		}
 	}
 
+	if ( empty( $contents ) ) {
+		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
+	}
+
 	file_put_contents( $path, $contents );
 
 	remove_filter( 's3_uploads_putObject_params', $func );
