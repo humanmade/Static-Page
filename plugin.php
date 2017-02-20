@@ -32,6 +32,12 @@ function queue_export( $config = null ) {
 function save_site( $config = null ) {
 	$urls = get_site_urls();
 	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array_fill( 0, count( $urls ), $config ) );
+
+	// Remove any URLs that errored.
+	$contents = array_filter( $contents, function ( $content ) {
+		return ! is_wp_error( $content );
+	});
+
 	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array_fill( 0, count( $urls ), $config ) );
 	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls, array_fill( 0, count( $urls ), $config ) );
 }
