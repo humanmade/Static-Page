@@ -21,6 +21,11 @@ class WP_CLI_Command extends \WP_CLI_Command {
 
 		foreach ( $urls as &$url ) {
 			$url = get_url_contents( $url, $args_assoc['config'] );
+			if ( is_wp_error( $url ) ) {
+				WP_CLI::warning( $url->get_error_message() );
+				continue;
+			}
+
 			$url = replace_urls( $url, $args_assoc['config'] );
 		}
 
@@ -62,6 +67,11 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		$progress = WP_CLI\Utils\make_progress_bar( 'Fetching pages', count( $urls ) );
 		$contents = array_map( function( $url ) use ( $progress, $args_assoc ) {
 			$contents = get_url_contents( $url, $args_assoc['config'] );
+			if ( is_wp_error( $contents ) ) {
+				WP_CLI::warning( $contents->get_error_message() );
+				$contents = '';
+			}
+
 			$progress->tick();
 			return $contents;
 		}, $urls );
