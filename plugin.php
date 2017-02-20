@@ -7,10 +7,12 @@
 */
 
 namespace Static_Page;
+
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
-use RegexIterator;
 use RecursiveRegexIterator;
+use RegexIterator;
+use WP_Error;
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
@@ -78,13 +80,26 @@ function get_site_urls( $config = null ) {
  *
  * @param  string $url
  * @param  mixed  $config Option config object that will be passed to filters etc.
- * @return string
+ * @return string|WP_Error URL contents on success, error object otherwise.
  */
 function get_url_contents( $url, $config = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
 	$response = wp_remote_get( $url, $args );
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code !== 200 ) {
+		return new WP_Error(
+			'static-page.get_url_contents.non_200',
+			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code ),
+			[ 'response' => $response ]
+		);
+	}
+
 	return wp_remote_retrieve_body( $response );
 }
 
