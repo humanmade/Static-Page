@@ -7,10 +7,12 @@
 */
 
 namespace Static_Page;
+
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
-use RegexIterator;
 use RecursiveRegexIterator;
+use RegexIterator;
+use WP_Error;
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
@@ -30,6 +32,12 @@ function queue_export( $config = null ) {
 function save_site( $config = null ) {
 	$urls = get_site_urls();
 	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array_fill( 0, count( $urls ), $config ) );
+
+	// Remove any URLs that errored.
+	$contents = array_filter( $contents, function ( $content ) {
+		return ! is_wp_error( $content );
+	});
+
 	$contents = array_map( __NAMESPACE__ . '\\replace_urls', $contents, array_fill( 0, count( $urls ), $config ) );
 	array_map( __NAMESPACE__ . '\\save_contents_for_url', $contents, $urls, array_fill( 0, count( $urls ), $config ) );
 }
@@ -78,13 +86,26 @@ function get_site_urls( $config = null ) {
  *
  * @param  string $url
  * @param  mixed  $config Option config object that will be passed to filters etc.
- * @return string
+ * @return string|WP_Error URL contents on success, error object otherwise.
  */
 function get_url_contents( $url, $config = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
 	$response = wp_remote_get( $url, $args );
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code !== 200 ) {
+		return new WP_Error(
+			'static-page.get_url_contents.non_200',
+			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code ),
+			[ 'response' => $response ]
+		);
+	}
+
 	return wp_remote_retrieve_body( $response );
 }
 
@@ -134,6 +155,10 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 		if ( ! is_dir( dirname( $path ) ) ) {
 			mkdir( dirname( $path ), 0755, true );
 		}
+	}
+
+	if ( empty( $contents ) ) {
+		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
 	file_put_contents( $path, $contents );
