@@ -20,13 +20,41 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 }
 
 add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
-add_action( 'static_page_save', __NAMESPACE__ . '\\save_site' );
+add_action( 'static_page_save', __NAMESPACE__ . '\\static_page_save' );
 add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
 function queue_export( $config = null ) {
 	if ( ! wp_next_scheduled( 'static_page_save' ) ) {
 		wp_schedule_single_event( time() + 5, 'static_page_save', array( $config ) );
 	}
+}
+
+function static_page_save( $config = null ) {
+
+	// Track the background task in an option for reporting / status checking.
+	$update_progress = [
+		'date'      => time(),
+		'urls'      => [],
+		'done_urls' => [],
+	];
+	$option_name = 'static_page_save_running';
+	update_option( $option_name, $update_progress );
+
+	$urls = get_site_urls();
+
+	$update_progress['urls'] = $urls;
+	update_option( $option_name, $update_progress );
+
+	foreach ( $urls as $url ) {
+		$contents = get_url_contents( $url, $config );
+		$contents = replace_urls( $contents, $config );
+		save_contents_for_url( $contents, $url, $config );
+
+		$update_progress['done_urls'][] = $url;
+		update_option( $option_name, $update_progress );
+	}
+
+	delete_option( $option_name );
 }
 
 function save_site( $config = null ) {
