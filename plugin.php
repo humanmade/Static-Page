@@ -29,6 +29,11 @@ function queue_export( $config = null ) {
 	}
 }
 
+/**
+ * Save the entire site, via a cron task.
+ *
+ * @param  string $config
+ */
 function static_page_save( $config = null ) {
 
 	// Track the background task in an option for reporting / status checking.
