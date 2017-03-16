@@ -52,6 +52,9 @@ function static_page_save( $config = null ) {
 
 	foreach ( $urls as $url ) {
 		$contents = get_url_contents( $url, $config );
+		if ( is_wp_error( $contents ) ) {
+			continue;
+		}
 		$contents = replace_urls( $contents, $config );
 		save_contents_for_url( $contents, $url, $config );
 
