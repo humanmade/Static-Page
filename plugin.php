@@ -137,7 +137,7 @@ function get_url_contents( $url, $config = null ) {
 	if ( $code !== 200 ) {
 		return new WP_Error(
 			'static-page.get_url_contents.non_200',
-			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code ),
+			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
 			[ 'response' => $response ]
 		);
 	}
