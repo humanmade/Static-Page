@@ -161,12 +161,17 @@ function get_destination_directory( $config = null ) {
 /**
  * Save the contents of a url to the static page destination.
  *
- * @param  string $contents
- * @param  string $url
- * @param  mixed  $config Option config object that will be passed to filters etc.
+ * @param $contents
+ * @param $url
+ * @param null $config
+ * @param int $page_id
+ * @param string $subsite_netstorage_path
  */
-function save_contents_for_url( $contents, $url, $config = null ) {
+function save_contents_for_url( $contents, $url, $config = null, $option_args = array() ) {
 	$dir = get_destination_directory( $config );
+
+	$dir = apply_filters( 'static_content_dir_path', $dir, $option_args );
+
 	if ( ! is_dir( $dir ) ) {
 		mkdir( $dir, 0755, true );
 	}
@@ -193,6 +198,8 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 		}
 	}
 
+	$path = apply_filters( 'static_content_dir_path', $path, $option_args );
+
 	if ( empty( $contents ) ) {
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
@@ -205,14 +212,26 @@ function save_contents_for_url( $contents, $url, $config = null ) {
 	do_action( 'static_page_saved_contents_for_url', $path, $config );
 }
 
-function remove_url( $url, $config = null ) {
+/**
+ * @param $url
+ * @param null $config
+ * @param array $option_args
+ */
+function remove_url( $url, $config = null, $option_args = array() ) {
 	$dir = get_destination_directory( $config );
+
+	$dir = apply_filters( 'static_content_dir_path', $dir, $option_args );
+
 	$path = $dir . str_replace( site_url(), '', $url );
+
+
 
 	// if the url looks to be a direcotry, create it and then call the file index.html
 	if ( substr( $path, -1 ) === '/' ) {
 		$path = $path . 'index.html';
 	}
+
+	$path = apply_filters( 'static_content_dir_path', $path, $option_args );
 
 	unlink( $path );
 
