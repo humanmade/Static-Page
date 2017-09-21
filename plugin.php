@@ -223,8 +223,6 @@ function remove_url( $url, $config = null, $option_args = array() ) {
 
 	$path = $dir . str_replace( site_url(), '', $url );
 
-
-
 	// if the url looks to be a direcotry, create it and then call the file index.html
 	if ( substr( $path, -1 ) === '/' ) {
 		$path = $path . 'index.html';
