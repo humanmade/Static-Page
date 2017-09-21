@@ -129,12 +129,12 @@ function get_url_contents( $url, $config = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
-	error_log( print_r( $url, true ) );
+
 	$response = wp_remote_get( $url, $args );
 	if ( is_wp_error( $response ) ) {
 		return $response;
 	}
-
+	error_log( print_r( $response, true ) );
 	$code = wp_remote_retrieve_response_code( $response );
 	if ( $code !== 200 ) {
 		return new WP_Error(
@@ -201,6 +201,7 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 
 	$path = apply_filters( 'static_content_dir_path', $path, $option_args );
 
+	error_log( print_r( $path, true ) );
 	if ( empty( $contents ) ) {
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
