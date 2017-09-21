@@ -129,6 +129,7 @@ function get_url_contents( $url, $config = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
+	error_log( print_r( $url, true ) );
 	$response = wp_remote_get( $url, $args );
 	if ( is_wp_error( $response ) ) {
 		return $response;
