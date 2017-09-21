@@ -164,8 +164,7 @@ function get_destination_directory( $config = null ) {
  * @param $contents
  * @param $url
  * @param null $config
- * @param int $page_id
- * @param string $subsite_netstorage_path
+ * @param array $option_args
  */
 function save_contents_for_url( $contents, $url, $config = null, $option_args = array() ) {
 	$dir = get_destination_directory( $config );
