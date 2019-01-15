@@ -46,17 +46,20 @@ function static_page_save( $config = null ) {
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
+	$posts_per_page = 50;
+
 	$query_args = [
 		'post_type'      => 'any',
-		'posts_per_page' => 50,
+		'posts_per_page' => $posts_per_page,
 		'paged'          => 1,
 	];
 
 	$query = new WP_Query( $query_args );
 	if ( $query->have_posts() ) {
 		$total_pages = $query->max_num_pages;
+		$page        = $query_args['paged'];
 		while ( $query->have_posts() ) {
-			$urls = get_site_urls( $config, $query->posts );
+			$urls = get_site_urls( $config, $page, $posts_per_page );
 
 			$update_progress['page'][ $query_args['paged'] ]['urls'] = $urls;
 			update_option( $option_name, $update_progress );
@@ -107,18 +110,7 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 }
 
 function save_site( $config = null ) {
-	$query_args = [
-		'post_type'      => 'any',
-		'posts_per_page' => -1,
-		'paged'          => 1,
-	];
-
-	$query = new WP_Query( $query_args );
-	if ( ! $query->posts ) {
-		return;
-	}
-
-	$urls = get_site_urls( $config, $query->posts );
+	$urls = get_site_urls( $config );
 	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array_fill( 0, count( $urls ), $config ) );
 
 	// Remove any URLs that errored.
@@ -148,22 +140,32 @@ function show_save_admin_notice() {
  *
  * @return string[]
  */
-function get_site_urls( $config = null, $posts ) {
+function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 	$urls = [
 		site_url( '/' ),
 	];
 
 	// Get URLs for all published posts
-	$urls = array_merge( $urls, array_map( 'get_permalink', $posts ) );
+	$query_args = [
+		'post_type'      => 'any',
+		'posts_per_page' => $posts_per_page,
+		'paged'          => $page,
+	];
 
-	// Get URLs for all public terms
-	$taxonomies = apply_filters( 'static_page_taxonomies', get_taxonomies( [ 'public' => true ], 'names' ) );
-	$taxonomies = array_map( 'get_terms', $taxonomies );
-	$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
-		return array_merge( $all_terms, $terms );
-	}, [] );
+	$query = new WP_Query( $query_args );
+	while ( $query->have_posts() ) {
 
-	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
+		$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
+
+		// Get URLs for all public terms
+		$taxonomies = apply_filters( 'static_page_taxonomies', get_taxonomies( [ 'public' => true ], 'names' ) );
+		$taxonomies = array_map( 'get_terms', $taxonomies );
+		$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
+			return array_merge( $all_terms, $terms );
+		}, [] );
+
+		$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
+	}
 
 	return apply_filters( 'static_page_site_urls', $urls, $config );
 }
