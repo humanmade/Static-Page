@@ -21,6 +21,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
 add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
 add_action( 'static_page_save', __NAMESPACE__ . '\\static_page_save' );
+add_action( 'process_static_pages', __NAMESPACE__ . '\\process_static_pages', 10, 4 );
 add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
 function queue_export( $config = null ) {
@@ -39,16 +40,52 @@ function static_page_save( $config = null ) {
 	// Track the background task in an option for reporting / status checking.
 	$update_progress = [
 		'date'      => time(),
-		'urls'      => [],
-		'done_urls' => [],
+		'page'      => [],
 	];
+
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
-	$urls = get_site_urls();
+	$query_args = [
+		'post_type'      => 'any',
+		'posts_per_page' => 50,
+		'paged'          => 1,
+	];
 
-	$update_progress['urls'] = $urls;
-	update_option( $option_name, $update_progress );
+	$query = new WP_Query( $query_args );
+	if ( $query->have_posts() ) {
+		$total_pages = $query->max_num_pages;
+		while ( $query->have_posts() ) {
+			$urls = get_site_urls( $config, $query->posts );
+
+			$update_progress['page'][ $query_args['paged'] ]['urls'] = $urls;
+			update_option( $option_name, $update_progress );
+
+			if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'] ] ) ) {
+				wp_schedule_single_event( time() + 5, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
+			}
+
+			if ( $query->max_num_pages >= $query_args['paged'] ) {
+				$query_args['paged'] ++;
+				$query = new WP_Query( $query_args );
+			} else {
+				break;
+			}
+		}
+	}
+}
+
+/**
+ * Process static pages
+ *
+ * @param string $config
+ * @param array  $urls
+ * @param int    $page
+ * @param int    $total_pages
+ * @return void
+ */
+function process_static_pages( $config, $urls, $page, $total_pages ) {
+	$option_name = 'static_page_save_running';
 
 	foreach ( $urls as $url ) {
 		$contents = get_url_contents( $url, $config );
@@ -56,18 +93,32 @@ function static_page_save( $config = null ) {
 			do_action( 'static_page_save_get_urls_contents_errored', $contents, $url, $config );
 			continue;
 		}
+
 		$contents = replace_urls( $contents, $config );
 		save_contents_for_url( $contents, $url, $config );
 
-		$update_progress['done_urls'][] = $url;
+		$update_progress['page'][ $page ]['done_urls'][] = $url;
 		update_option( $option_name, $update_progress );
 	}
 
-	delete_option( $option_name );
+	if ( $total_pages === $page ) {
+		delete_option( $option_name );
+	}
 }
 
 function save_site( $config = null ) {
-	$urls = get_site_urls();
+	$query_args = [
+		'post_type'      => 'any',
+		'posts_per_page' => -1,
+		'paged'          => 1,
+	];
+
+	$query = new WP_Query( $query_args );
+	if ( ! $query->posts ) {
+		return;
+	}
+
+	$urls = get_site_urls( $config, $query->posts );
 	$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls, array_fill( 0, count( $urls ), $config ) );
 
 	// Remove any URLs that errored.
@@ -97,13 +148,12 @@ function show_save_admin_notice() {
  *
  * @return string[]
  */
-function get_site_urls( $config = null ) {
+function get_site_urls( $config = null, $posts ) {
 	$urls = [
 		site_url( '/' ),
 	];
 
 	// Get URLs for all published posts
-	$posts = get_posts( [ 'posts_per_page' => -1, 'post_type' => 'any' ] );
 	$urls = array_merge( $urls, array_map( 'get_permalink', $posts ) );
 
 	// Get URLs for all public terms
