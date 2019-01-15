@@ -13,6 +13,7 @@ use RecursiveDirectoryIterator;
 use RecursiveRegexIterator;
 use RegexIterator;
 use WP_Error;
+use WP_Query;
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
@@ -40,6 +41,8 @@ function static_page_save( $config = null ) {
 	// Track the background task in an option for reporting / status checking.
 	$update_progress = [
 		'date'      => time(),
+		'urls'      => [],
+		'done_urls' => [],
 		'page'      => [],
 	];
 
@@ -61,7 +64,7 @@ function static_page_save( $config = null ) {
 		while ( $query->have_posts() ) {
 			$urls = get_site_urls( $config, $page, $posts_per_page );
 
-			$update_progress['page'][ $query_args['paged'] ]['urls'] = $urls;
+			$update_progress['urls'][] = $urls;
 			update_option( $option_name, $update_progress );
 
 			if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'] ] ) ) {
@@ -100,7 +103,7 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 		$contents = replace_urls( $contents, $config );
 		save_contents_for_url( $contents, $url, $config );
 
-		$update_progress['page'][ $page ]['done_urls'][] = $url;
+		$update_progress['done_urls'][] = $url;
 		update_option( $option_name, $update_progress );
 	}
 
