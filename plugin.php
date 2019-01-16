@@ -168,6 +168,9 @@ function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 		}, [] );
 
 		$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
+
+		// Break, otherwise 504 error will occur.
+		break;
 	}
 
 	return apply_filters( 'static_page_site_urls', $urls, $config );
