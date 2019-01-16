@@ -60,24 +60,30 @@ function static_page_save( $config = null ) {
 	];
 
 	$query = new WP_Query( $query_args );
-	if ( $query->have_posts() ) {
-		$total_pages = $query->max_num_pages;
-		do {
-			$urls = get_site_urls( $config, $query_args['paged'], $posts_per_page );
-
-			// Update progress list.
-			$update_progress         = get_option( $option_name, $update_progress );
-			$update_progress['urls'] = array_merge( $update_progress['urls'], $urls );
-			update_option( $option_name, $update_progress );
-
-			if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] ) ) {
-				wp_schedule_single_event( time() + 300, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
-			}
-
-			$query_args['paged'] ++;
-			$query = new WP_Query( $query_args );
-		} while ( $query->have_posts() && $query->max_num_pages !== $query_args['paged'] );
+	if ( ! $query->have_posts() ) {
+		return;
 	}
+
+	$total_pages = $query->max_num_pages;
+	do {
+		$urls = get_site_urls( $config, $query_args['paged'], $posts_per_page );
+
+		if ( empty( $urls ) ) {
+			continue;
+		}
+
+		// Update progress list.
+		$update_progress         = get_option( $option_name, $update_progress );
+		$update_progress['urls'] = array_merge( $update_progress['urls'], $urls );
+		update_option( $option_name, $update_progress );
+
+		if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] ) ) {
+			wp_schedule_single_event( time() + 300, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
+		}
+
+		$query_args['paged'] ++;
+		$query = new WP_Query( $query_args );
+	} while ( $query->have_posts() && $query->max_num_pages !== $query_args['paged'] );
 }
 
 /**
@@ -163,7 +169,7 @@ function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 
 	$query = new WP_Query( $query_args );
 	if ( ! $query->have_posts() ) {
-		return apply_filters( 'static_page_site_urls', $urls, $config, $page, $posts_per_page );
+		return;
 	}
 
 	$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
