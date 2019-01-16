@@ -27,7 +27,7 @@ add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
 function queue_export( $config = null ) {
 	if ( ! wp_next_scheduled( 'static_page_save' ) ) {
-		wp_schedule_single_event( time() + 5, 'static_page_save', array( $config ) );
+		wp_schedule_single_event( time() + 300, 'static_page_save', array( $config ) );
 	}
 }
 
@@ -37,13 +37,11 @@ function queue_export( $config = null ) {
  * @param  string $config
  */
 function static_page_save( $config = null ) {
-
 	// Track the background task in an option for reporting / status checking.
 	$update_progress = [
 		'date'      => time(),
 		'urls'      => [],
 		'done_urls' => [],
-		'page'      => [],
 	];
 
 	$option_name = 'static_page_save_running';
@@ -52,32 +50,33 @@ function static_page_save( $config = null ) {
 	$posts_per_page = 50;
 
 	$query_args = [
-		'post_type'      => 'any',
-		'posts_per_page' => $posts_per_page,
-		'paged'          => 1,
+		'post_type'              => 'any',
+		'posts_per_page'         => $posts_per_page,
+		'paged'                  => 1,
+		'fields'                 => 'ids',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
 	];
 
 	$query = new WP_Query( $query_args );
 	if ( $query->have_posts() ) {
 		$total_pages = $query->max_num_pages;
-		$page        = $query_args['paged'];
-		while ( $query->have_posts() ) {
-			$urls = get_site_urls( $config, $page, $posts_per_page );
+		do {
+			$urls = get_site_urls( $config, $query_args['paged'], $posts_per_page );
 
-			$update_progress['urls'][] = $urls;
+			// Update progress list.
+			$update_progress         = get_option( $option_name, $update_progress );
+			$update_progress['urls'] = array_merge( $update_progress['urls'], $urls );
 			update_option( $option_name, $update_progress );
 
-			if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'] ] ) ) {
-				wp_schedule_single_event( time() + 5, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
+			if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] ) ) {
+				wp_schedule_single_event( time() + 300, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
 			}
 
-			if ( $query->max_num_pages >= $query_args['paged'] ) {
-				$query_args['paged'] ++;
-				$query = new WP_Query( $query_args );
-			} else {
-				break;
-			}
-		}
+			$query_args['paged'] ++;
+			$query = new WP_Query( $query_args );
+		} while ( $query->have_posts() && $query->max_num_pages !== $query_args['paged'] );
 	}
 }
 
@@ -88,6 +87,7 @@ function static_page_save( $config = null ) {
  * @param array  $urls
  * @param int    $page
  * @param int    $total_pages
+ *
  * @return void
  */
 function process_static_pages( $config, $urls, $page, $total_pages ) {
@@ -103,7 +103,9 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 		$contents = replace_urls( $contents, $config );
 		save_contents_for_url( $contents, $url, $config );
 
-		$update_progress['done_urls'][] = $url;
+		// Update done list.
+		$update_progress                = get_option( $option_name, $update_progress );
+		$update_progress['done_urls'][] = array_merge( $update_progress['done_urls'], $urls );
 		update_option( $option_name, $update_progress );
 	}
 
@@ -150,30 +152,32 @@ function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 
 	// Get URLs for all published posts
 	$query_args = [
-		'post_type'      => 'any',
-		'posts_per_page' => $posts_per_page,
-		'paged'          => $page,
+		'post_type'              => 'any',
+		'posts_per_page'         => $posts_per_page,
+		'paged'                  => $page,
+		'fields'                 => 'ids',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
 	];
 
 	$query = new WP_Query( $query_args );
-	while ( $query->have_posts() ) {
-
-		$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
-
-		// Get URLs for all public terms
-		$taxonomies = apply_filters( 'static_page_taxonomies', get_taxonomies( [ 'public' => true ], 'names' ) );
-		$taxonomies = array_map( 'get_terms', $taxonomies );
-		$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
-			return array_merge( $all_terms, $terms );
-		}, [] );
-
-		$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
-
-		// Break, otherwise 504 error will occur.
-		break;
+	if ( ! $query->have_posts() ) {
+		return apply_filters( 'static_page_site_urls', $urls, $config, $page, $posts_per_page );
 	}
 
-	return apply_filters( 'static_page_site_urls', $urls, $config );
+	$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
+
+	// Get URLs for all public terms
+	$taxonomies = apply_filters( 'static_page_taxonomies', get_taxonomies( [ 'public' => true ], 'names' ) );
+	$taxonomies = array_map( 'get_terms', $taxonomies );
+	$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
+		return array_merge( $all_terms, $terms );
+	}, [] );
+
+	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
+
+	return apply_filters( 'static_page_site_urls', $urls, $config, $page, $posts_per_page );
 }
 
 /**
