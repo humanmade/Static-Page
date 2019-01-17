@@ -22,7 +22,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 
 add_action( 'save_post', __NAMESPACE__ . '\\queue_export' );
 add_action( 'static_page_save', __NAMESPACE__ . '\\static_page_save' );
-add_action( 'process_static_pages', __NAMESPACE__ . '\\process_static_pages', 10, 4 );
+add_action( 'process_static_pages', __NAMESPACE__ . '\\process_static_pages', 10, 2 );
 add_action( 'admin_notices', __NAMESPACE__ . '\\show_save_admin_notice' );
 
 function queue_export( $config = null ) {
@@ -65,12 +65,10 @@ function static_page_save( $config = null ) {
  *
  * @param string $config
  * @param array  $urls
- * @param int    $page
- * @param int    $total_pages
  *
  * @return void
  */
-function process_static_pages( $config, $urls, $page, $total_pages ) {
+function process_static_pages( $config, $urls ) {
 	$option_name = 'static_page_save_running';
 
 	foreach ( $urls as $url ) {
@@ -89,7 +87,8 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 		update_option( $option_name, $update_progress );
 	}
 
-	if ( $total_pages === $page ) {
+	$get_progress = get_option( $option_name );
+	if ( count( $get_progress['done_urls'] ) === count( $get_progress['urls'] ) ) {
 		delete_option( $option_name );
 	}
 }
@@ -153,7 +152,7 @@ function get_site_urls( $config = null ) {
 
 	$urls = array_merge( $urls, array_map( 'get_term_link', $terms ) );
 
-	return apply_filters( 'static_page_site_urls', $urls, $config, $page, $posts_per_page );
+	return apply_filters( 'static_page_site_urls', $urls, $config );
 }
 
 /**
