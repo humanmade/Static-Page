@@ -47,13 +47,12 @@ function static_page_save( $config = null ) {
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
-	$posts_per_page = 25;
+	$posts_per_page = 50;
 
 	$query_args = [
 		'post_type'              => 'any',
 		'posts_per_page'         => $posts_per_page,
 		'fields'                 => 'ids',
-		'no_found_rows'          => true,
 		'paged'                  => 1,
 		'update_post_meta_cache' => false,
 		'update_post_term_cache' => false,
@@ -83,7 +82,7 @@ function static_page_save( $config = null ) {
 
 		$query_args['paged'] ++;
 		$query = new WP_Query( $query_args );
-	} while ( $query->have_posts() && $query->max_num_pages !== $query_args['paged'] );
+	} while ( $query->have_posts() && $query->max_num_pages >= $query_args['paged'] );
 }
 
 /**
@@ -162,7 +161,6 @@ function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 		'posts_per_page'         => $posts_per_page,
 		'paged'                  => $page,
 		'fields'                 => 'ids',
-		'no_found_rows'          => true,
 		'update_post_meta_cache' => false,
 		'update_post_term_cache' => false,
 	];
