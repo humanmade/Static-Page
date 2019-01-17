@@ -47,7 +47,7 @@ function static_page_save( $config = null ) {
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
-	$url_pages = array_chunk( get_site_urls( $config, $query_args['paged'], $posts_per_page ), 50 );
+	$url_pages = array_chunk( get_site_urls( $config ), 50 );
 
 	foreach( $url_pages as $page => $urls) {
 		$update_progress         = get_option( $option_name ) ?? $update_progress;
@@ -82,7 +82,7 @@ function process_static_pages( $config, $urls ) {
 		save_contents_for_url( $contents, $url, $config );
 
 		// Update done list.
-		$update_progress              = get_option( $option_name );
+		$update_progress                = get_option( $option_name );
 		$update_progress['done_urls'][] = $url;
 		update_option( $option_name, $update_progress );
 	}
