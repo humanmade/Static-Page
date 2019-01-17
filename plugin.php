@@ -111,7 +111,7 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 
 		// Update done list.
 		$update_progress              = get_option( $option_name );
-		$update_progress['done_urls'] = array_merge( $update_progress['done_urls'], $urls );
+		$update_progress['done_urls'][] = $url;
 		update_option( $option_name, $update_progress );
 	}
 
