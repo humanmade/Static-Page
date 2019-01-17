@@ -52,7 +52,6 @@ function static_page_save( $config = null ) {
 	$query_args = [
 		'post_type'              => 'any',
 		'posts_per_page'         => $posts_per_page,
-		'paged'                  => 1,
 		'fields'                 => 'ids',
 		'no_found_rows'          => true,
 		'update_post_meta_cache' => false,
@@ -111,7 +110,7 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 
 		// Update done list.
 		$update_progress                = get_option( $option_name, $update_progress );
-		$update_progress['done_urls'][] = array_merge( $update_progress['done_urls'], $urls );
+		$update_progress['done_urls'] = array_merge( $update_progress['done_urls'], $urls );
 		update_option( $option_name, $update_progress );
 	}
 
