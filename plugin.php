@@ -47,42 +47,17 @@ function static_page_save( $config = null ) {
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
-	$posts_per_page = 50;
+	$url_pages = array_chunk( get_site_urls( $config, $query_args['paged'], $posts_per_page ), 50 );
 
-	$query_args = [
-		'post_type'              => 'any',
-		'posts_per_page'         => $posts_per_page,
-		'fields'                 => 'ids',
-		'paged'                  => 1,
-		'update_post_meta_cache' => false,
-		'update_post_term_cache' => false,
-	];
-
-	$query = new WP_Query( $query_args );
-	if ( ! $query->have_posts() ) {
-		return;
-	}
-
-	$total_pages = $query->max_num_pages;
-	do {
-		$urls = get_site_urls( $config, $query_args['paged'], $posts_per_page );
-
-		if ( empty( $urls ) ) {
-			continue;
-		}
-
-		// Update progress list.
+	foreach( $url_pages as $page => $urls) {
 		$update_progress         = get_option( $option_name ) ?? $update_progress;
 		$update_progress['urls'] = array_merge( $update_progress['urls'], $urls );
 		update_option( $option_name, $update_progress );
 
-		if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] ) ) {
-			wp_schedule_single_event( time() + 300, 'process_static_pages', [ $config, $urls, $query_args['paged'], $total_pages ] );
+		if ( ! wp_next_scheduled( 'process_static_pages', [ $config, $urls ] ) ) {
+			wp_schedule_single_event( time() + 300, 'process_static_pages', [ $config, $urls ] );
 		}
-
-		$query_args['paged'] ++;
-		$query = new WP_Query( $query_args );
-	} while ( $query->have_posts() && $query->max_num_pages >= $query_args['paged'] );
+	}
 }
 
 /**
@@ -150,7 +125,7 @@ function show_save_admin_notice() {
  *
  * @return string[]
  */
-function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
+function get_site_urls( $config = null ) {
 	$urls = [
 		site_url( '/' ),
 	];
@@ -158,21 +133,18 @@ function get_site_urls( $config = null, $page = 1, $posts_per_page = -1 ) {
 	// Get URLs for all published posts
 	$query_args = [
 		'post_type'              => 'any',
-		'posts_per_page'         => $posts_per_page,
-		'paged'                  => $page,
 		'fields'                 => 'ids',
+		'posts_per_page'         => -1,
 		'update_post_meta_cache' => false,
 		'update_post_term_cache' => false,
 	];
 
 	$query = new WP_Query( $query_args );
-	if ( ! $query->have_posts() ) {
-		return;
+	if ( $query->have_posts() ) {
+		$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
 	}
 
-	$urls = array_merge( $urls, array_map( 'get_permalink', $query->posts ) );
-
-	// Get URLs for all public terms
+	// Get taxonomy URLs.
 	$taxonomies = apply_filters( 'static_page_taxonomies', get_taxonomies( [ 'public' => true ], 'names' ) );
 	$taxonomies = array_map( 'get_terms', $taxonomies );
 	$terms = array_reduce( $taxonomies, function( $all_terms, $terms ) {
