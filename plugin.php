@@ -47,13 +47,14 @@ function static_page_save( $config = null ) {
 	$option_name = 'static_page_save_running';
 	update_option( $option_name, $update_progress );
 
-	$posts_per_page = 50;
+	$posts_per_page = 25;
 
 	$query_args = [
 		'post_type'              => 'any',
 		'posts_per_page'         => $posts_per_page,
 		'fields'                 => 'ids',
 		'no_found_rows'          => true,
+		'paged'                  => 1,
 		'update_post_meta_cache' => false,
 		'update_post_term_cache' => false,
 	];
@@ -72,7 +73,7 @@ function static_page_save( $config = null ) {
 		}
 
 		// Update progress list.
-		$update_progress         = get_option( $option_name, $update_progress );
+		$update_progress         = get_option( $option_name ) ?? $update_progress;
 		$update_progress['urls'] = array_merge( $update_progress['urls'], $urls );
 		update_option( $option_name, $update_progress );
 
@@ -109,7 +110,7 @@ function process_static_pages( $config, $urls, $page, $total_pages ) {
 		save_contents_for_url( $contents, $url, $config );
 
 		// Update done list.
-		$update_progress                = get_option( $option_name, $update_progress );
+		$update_progress              = get_option( $option_name );
 		$update_progress['done_urls'] = array_merge( $update_progress['done_urls'], $urls );
 		update_option( $option_name, $update_progress );
 	}
