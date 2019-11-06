@@ -205,6 +205,8 @@ function get_destination_directory( $config = null ) {
  * @param array $option_args
  */
 function save_contents_for_url( $contents, $url, $config = null, $option_args = array() ) {
+	do_action( 'static_page_save_contents_for_url', $contents, $url, $config, $option_args );
+
 	$dir = get_destination_directory( $config );
 
 	$dir = apply_filters( 'static_content_dir_path', $dir, $option_args );
@@ -255,6 +257,8 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
  * @param array $option_args
  */
 function remove_url( $url, $config = null, $option_args = array() ) {
+	do_action( 'static_page_remove_url', $url, $config, $option_args );
+
 	$dir = get_destination_directory( $config );
 
 	$dir = apply_filters( 'static_content_dir_path', $dir, $option_args );
