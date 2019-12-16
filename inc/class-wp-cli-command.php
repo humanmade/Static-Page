@@ -99,6 +99,24 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			if ( ! empty( $args_assoc['verbose'] ) ) {
 				WP_CLI::line( 'Saving ' . $url );
 			}
+
+			$options = [
+				'user_id' => get_current_user_id(),
+				'context' => '',
+				'action'  => '',
+			];
+
+			$post_id = url_to_postid( $url );
+			if ( ! empty( $post_id ) ) {
+				$post = get_post( $post_id );
+				if ( $post->post_type === 'page' ) {
+					$options['context'] = 'page';
+					$options['action']  = 'wp_cli_netstorage_publish';
+				}
+			}
+
+			do_action( 'ns_wp_cli_export_page', $post_id, $options );
+
 			save_contents_for_url( $content, $url, $args_assoc['config'] );
 		}, $contents, $urls );
 
