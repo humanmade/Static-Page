@@ -109,7 +109,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			$post_id = url_to_postid( $url );
 			if ( ! empty( $post_id ) ) {
 				$post = get_post( $post_id );
-				if ( $post->post_type === 'page' ) {
+				if ( $post instanceof  \WP_Post && $post->post_type === 'page' ) {
 					$options['context'] = 'page';
 					$options['action']  = 'wp_cli_netstorage_publish';
 				}
