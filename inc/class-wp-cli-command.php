@@ -130,6 +130,12 @@ class WP_CLI_Command extends \WP_CLI_Command {
 				}
 			}
 
+			/**
+			 * Action hook to pass data about netstorage export.
+			 *
+			 * @param int   $post_id  Post ID.
+			 * @param array $options  Netstorage update data.
+			 */
 			do_action( 'ns_wp_cli_export_page', $post_id, $options );
 
 			save_contents_for_url( $content, $url, $args_assoc['config'] );
