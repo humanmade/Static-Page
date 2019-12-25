@@ -123,7 +123,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 					);
 
 					$query = new \WP_Query( $args );
-					if ( ! empty( $query->post ) ) { // Get the first post assuming no posts will have the same path.
+					if ( ! empty( $query->post ) && $query->post->ID === $post_id ) { // Get the first post assuming no posts will have the same path.
 						$options['context'] = 'netstorage-file';
 						$options['action']  = 'wp_cli_netstorage_publish';
 					}
