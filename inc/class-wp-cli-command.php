@@ -99,6 +99,45 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			if ( ! empty( $args_assoc['verbose'] ) ) {
 				WP_CLI::line( 'Saving ' . $url );
 			}
+
+			$options = [
+				'user_id' => get_current_user_id(),
+				'context' => '',
+				'action'  => '',
+			];
+
+			$post_id = url_to_postid( $url );
+			if ( ! empty( $post_id ) ) {
+				$post = get_post( $post_id );
+				if ( $post instanceof  \WP_Post && $post->post_type === 'page' ) {
+					$options['context'] = 'page';
+					$options['action']  = 'wp_cli_netstorage_publish';
+				}
+			} else {
+				$parsed_url = wp_parse_url( $url );
+				if ( ! empty( $parsed_url ) ) {
+					$args = array(
+						'meta_key'   => 'netstorage_path',
+						'meta_value' => substr( $parsed_url['path'], 1 ),
+						'post_type'  => 'netstorage-file',
+					);
+
+					$query = new \WP_Query( $args );
+					if ( ! empty( $query->post ) && $query->post->ID === $post_id ) { // Get the first post assuming no posts will have the same path.
+						$options['context'] = 'netstorage-file';
+						$options['action']  = 'wp_cli_netstorage_publish';
+					}
+				}
+			}
+
+			/**
+			 * Action hook to pass data about netstorage export.
+			 *
+			 * @param int   $post_id  Post ID.
+			 * @param array $options  Netstorage update data.
+			 */
+			do_action( 'ns_wp_cli_export_page', $post_id, $options );
+
 			save_contents_for_url( $content, $url, $args_assoc['config'] );
 		}, $contents, $urls );
 
