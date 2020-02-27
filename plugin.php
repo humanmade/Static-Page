@@ -15,6 +15,8 @@ use RegexIterator;
 use WP_Error;
 use WP_Query;
 
+use function SC\NetStorage_Files_CPTs\sanitize_file_name_with_slashes;
+
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
 	\WP_CLI::add_command( 'static-page', __NAMESPACE__ . '\\WP_CLI_Command' );
@@ -162,25 +164,32 @@ function get_site_urls( $config = null ) {
  * @param  mixed  $config Option config object that will be passed to filters etc.
  * @return string|WP_Error URL contents on success, error object otherwise.
  */
-function get_url_contents( $url, $config = null ) {
+function get_url_contents( $url, $config = null, $post_id = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
-	$response = wp_remote_get( $url, $args );
-	if ( is_wp_error( $response ) ) {
-		return $response;
+
+	if ( 'netstorage-file' === get_post_type( $post_id ) ) {
+		$content = '';
+	} else {
+		$response = wp_remote_get( $url, $args );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( $code !== 200 ) {
+			return new WP_Error(
+				'static-page.get_url_contents.non_200',
+				sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
+				[ 'response' => $response ]
+			);
+		}
+
+		$content = wp_remote_retrieve_body( $response );
 	}
 
-	$code = wp_remote_retrieve_response_code( $response );
-	if ( $code !== 200 ) {
-		return new WP_Error(
-			'static-page.get_url_contents.non_200',
-			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
-			[ 'response' => $response ]
-		);
-	}
-
-	return wp_remote_retrieve_body( $response );
+	return $content;
 }
 
 function replace_urls( $content, $config = null ) {
@@ -243,7 +252,26 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
-	file_put_contents( $path, $contents );
+	// Restore to current blog.
+	// We can be switched to a different blog from netstorage_multi_destination();
+	$current_blog = get_current_blog_id();
+	restore_current_blog();
+
+	$post_id    = $option_args['post_id'] ?? null;
+	$post_type  = get_post_type( $post_id );
+
+	if ( 'netstorage-file' === $post_type ) {
+		$upload_dir = wp_upload_dir();
+		$file       = $upload_dir['basedir'] . '/' . sanitize_file_name_with_slashes( get_post_meta( $post_id, '_wp_attached_file', true ) );
+	}
+
+	switch_to_blog( $current_blog );
+
+	if ( 'netstorage-file' === $post_type ) {
+		copy( $file, $path );
+	} else {
+		file_put_contents( $path, $contents );
+	}
 
 	remove_filter( 's3_uploads_putObject_params', $func );
 
