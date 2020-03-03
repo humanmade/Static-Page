@@ -159,10 +159,11 @@ function get_site_urls( $config = null ) {
  * Get the page contents of a URL.
  *
  * @param  string $url
- * @param  mixed  $config Option config object that will be passed to filters etc.
+ * @param  mixed  $config  Option config object that will be passed to filters etc.
+ * @param  int    $post_id Current Post ID.
  * @return string|WP_Error URL contents on success, error object otherwise.
  */
-function get_url_contents( $url, $config = null ) {
+function get_url_contents( $url, $config = null, $post_id = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
