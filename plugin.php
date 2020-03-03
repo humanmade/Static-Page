@@ -265,9 +265,13 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 		$file       = $upload_dir['basedir'] . '/' . sanitize_file_name_with_slashes( get_post_meta( $post_id, '_wp_attached_file', true ) );
 	}
 
+	// Get the path of the new $file.
+	$ext = pathinfo( $file, PATHINFO_EXTENSION );
+
 	switch_to_blog( $current_blog );
 
-	if ( 'netstorage-file' === $post_type ) {
+	// `copy` the file if it's a netstorage-file post type and it's not a ZIP file.
+	if ( 'netstorage-file' === $post_type && $ext !== 'zip' ) {
 		copy( $file, $path );
 	} else {
 		file_put_contents( $path, $contents );
