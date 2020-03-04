@@ -15,8 +15,6 @@ use RegexIterator;
 use WP_Error;
 use WP_Query;
 
-use function SC\NetStorage_Files_CPTs\sanitize_file_name_with_slashes;
-
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/class-wp-cli-command.php';
 	\WP_CLI::add_command( 'static-page', __NAMESPACE__ . '\\WP_CLI_Command' );
@@ -252,23 +250,9 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
-	// Restore to current blog.
-	// We can be switched to a different blog from netstorage_multi_destination();
-	$current_blog = get_current_blog_id();
-	restore_current_blog();
-
-	$post_id    = $option_args['post_id'] ?? null;
-	$post_type  = get_post_type( $post_id );
-
-	if ( 'netstorage-file' === $post_type ) {
-		$upload_dir = wp_upload_dir();
-		$file       = $upload_dir['basedir'] . '/' . sanitize_file_name_with_slashes( get_post_meta( $post_id, '_wp_attached_file', true ) );
-	}
-
-	// Get the path of the new $file.
-	$ext = pathinfo( $file, PATHINFO_EXTENSION );
-
-	switch_to_blog( $current_blog );
+	$post_type = $option_args['post_id'] ?? null;
+	$file      = $option_args['file_path'] ?? null;
+	$ext       = pathinfo( $file, PATHINFO_EXTENSION );
 
 	// `copy` the file if it's a netstorage-file post type and it's not a ZIP file.
 	if ( 'netstorage-file' === $post_type && $ext !== 'zip' ) {
