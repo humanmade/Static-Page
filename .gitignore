@@ -1,0 +1,5 @@
+# Composer packages.
+vendor/
+
+# Mac OS generated files
+.DS_Store

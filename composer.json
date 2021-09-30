@@ -1,0 +1,14 @@
+{
+    "name": "humanmade/static-page",
+    "description": "Export / save static copies of all your WordPress URLs.",
+    "type": "wordpress-plugin",
+    "authors": [
+        {
+            "name": "Human Made",
+            "email": "hello@hmn.md"
+        }
+    ],
+    "require": {
+      "composer/installers": "^1.0"
+    }
+}
