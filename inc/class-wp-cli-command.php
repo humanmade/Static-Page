@@ -80,13 +80,13 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			if ( $pid == - 1 ) {
 				die( 'could not fork' );
 			} else if ( $pid ) {
-				// we are the parent
+				// This is the main process. Put it to wait till all the child process finished.
 				\pcntl_wait( $status ); //Protect against Zombie children
 			} else {
 				// Now we are in child process.
 
 				$content = get_url_contents( $url, $config );
-				// $content = get_url_contents( $url, $args_assoc['config'] );
+
 				if ( is_wp_error( $content ) ) {
 					WP_CLI::warning( $content->get_error_message() );
 					$content = '';
@@ -106,43 +106,8 @@ class WP_CLI_Command extends \WP_CLI_Command {
 					});
 				}
 
-				$options = [
-					'user_id' => get_current_user_id(),
-					'context' => '',
-					'action'  => '',
-				];
-
-				$post_id = url_to_postid( $url );
-				if ( ! empty( $post_id ) ) {
-					$post = get_post( $post_id );
-					if ( $post instanceof  \WP_Post && $post->post_type === 'page' ) {
-						$options['context'] = 'page';
-						$options['action']  = 'wp_cli_netstorage_publish';
-					}
-				} else {
-					$parsed_url = wp_parse_url( $url );
-					if ( ! empty( $parsed_url ) ) {
-						$args = array(
-							'meta_key'   => 'netstorage_path',
-							'meta_value' => substr( $parsed_url['path'], 1 ),
-							'post_type'  => 'netstorage-file',
-						);
-
-						$query = new \WP_Query( $args );
-						if ( ! empty( $query->post ) && $query->post->ID === $post_id ) { // Get the first post assuming no posts will have the same path.
-							$options['context'] = 'netstorage-file';
-							$options['action']  = 'wp_cli_netstorage_publish';
-						}
-					}
-				}
-
-				/**
-				 * Action hook to pass data about netstorage export.
-				 *
-				 * @param int   $post_id  Post ID.
-				 * @param array $options  Netstorage update data.
-				 */
-				do_action( 'ns_wp_cli_export_page', $post_id, $options );
+				// Fire 3rd party actions.
+				$this->do_actions( $url );
 
 				save_contents_for_url( $content, $url, $config );
 
@@ -187,5 +152,54 @@ class WP_CLI_Command extends \WP_CLI_Command {
 			}
 			copy_asset( $path, $args_assoc['config'] );
 		}, $assets );
+	}
+
+	/**
+	 * Fire another actions for 3rd party processes.
+	 *
+	 * @param string $url
+	 *
+	 * @return void
+	 */
+	protected function do_actions( string $url ) {
+		$post_id = url_to_postid( $url );
+		if ( ! empty( $post_id ) ) {
+			$post = get_post( $post_id );
+			if ( $post instanceof  \WP_Post && $post->post_type === 'page' ) {
+				$options['context'] = 'page';
+				$options['action']  = 'wp_cli_netstorage_publish';
+			}
+		} else {
+			$parsed_url = wp_parse_url( $url );
+			if ( ! empty( $parsed_url ) ) {
+				$args = array(
+					'meta_key'   => 'netstorage_path',
+					'meta_value' => substr( $parsed_url['path'], 1 ),
+					'post_type'  => 'netstorage-file',
+				);
+
+				$query = new \WP_Query( $args );
+				if ( ! empty( $query->post ) && $query->post->ID === $post_id ) { // Get the first post assuming no posts will have the same path.
+					$options['context'] = 'netstorage-file';
+					$options['action']  = 'wp_cli_netstorage_publish';
+				}
+			}
+		}
+
+		/**
+		 * Action hook to pass data about NetStorage export.
+		 *
+		 * @param int   $post_id  Post ID.
+		 * @param array $options  NetStorage update data.
+		 */
+		do_action( 'ns_wp_cli_export_page', $post_id, $options );
+
+		/**
+		 * Action hook to pass data for other 3rd party.
+		 *
+		 * @param int   $post_id  Post ID.
+		 * @param array $options  Update data.
+		 */
+		do_action( 'static_page_wp_cli_export_page', $post_id, $options );
 	}
 }

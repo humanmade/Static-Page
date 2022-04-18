@@ -158,7 +158,7 @@ function get_site_urls( $config = null ) {
 /**
  * Get the page contents of a URL.
  *
- * @param  string $url
+ * @param  string $url     URL to get the content from.
  * @param  mixed  $config  Option config object that will be passed to filters etc.
  * @param  int    $post_id Current Post ID.
  * @return string|WP_Error URL contents on success, error object otherwise.
@@ -189,9 +189,9 @@ function get_url_with_remote_request( $url, $config = null ) {
 	$code = wp_remote_retrieve_response_code( $response );
 	if ( $code !== 200 ) {
 		return new WP_Error(
-				'static-page.get_url_contents.non_200',
-				sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
-				[ 'response' => $response ]
+			'static-page.get_url_contents.non_200',
+			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
+			[ 'response' => $response ]
 		);
 	}
 
@@ -201,7 +201,7 @@ function get_url_with_remote_request( $url, $config = null ) {
 /**
  * Get the page contents of a URL.
  *
- * @param  string $url
+ * @param  string $url     URL to get the content from.
  * @param  mixed  $config  Option config object that will be passed to filters etc.
  * @return string|WP_Error URL contents on success, error object otherwise.
  */
@@ -254,6 +254,11 @@ function get_url_with_template_loader( $url, $config = null ) {
 	return ob_get_clean();
 }
 
+/**
+ * Clean up global query vars.
+ *
+ * @return void
+ */
 function _cleanup_query_vars() {
 	// clean out globals to stop them polluting wp and wp_query
 	foreach ( $GLOBALS['wp']->public_query_vars as $v )
@@ -273,7 +278,14 @@ function _cleanup_query_vars() {
 	}
 }
 
-
+/**
+ * Replace urls inside the content.
+ *
+ * @param string $content HTML Content.
+ * @param mixed $config Option config object that will be passed to filters etc.
+ *
+ * @return mixed|void
+ */
 function replace_urls( $content, $config = null ) {
 	return apply_filters( 'static_page_replace_urls_in_content', $content, $config );
 }
