@@ -18,6 +18,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		}
 
 		$urls = ! empty( $args[0] ) ? [ $args[0] ] : get_site_urls( $args_assoc['config'] );
+		$urls = array_unique( $urls );
 
 		$contents = array_map( __NAMESPACE__ . '\\get_url_contents', $urls );
 
