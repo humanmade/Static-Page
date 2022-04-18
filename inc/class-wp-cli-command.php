@@ -67,7 +67,7 @@ class WP_CLI_Command extends \WP_CLI_Command {
 		$progress = WP_CLI\Utils\make_progress_bar( 'Fetching & Saving pages', count( $urls ) );
 
 		$config = $args_assoc['config'] ?? null;
-		$replace_form = $args_assoc['replace-from'] ?? '';
+		$replace_from = $args_assoc['replace-from'] ?? '';
 		$replace_to = $args_assoc['replace-to'] ?? '';
 		$output_dir = $args[0] ?? '';
 
@@ -92,9 +92,9 @@ class WP_CLI_Command extends \WP_CLI_Command {
 					$content = '';
 				}
 
-				if ( ! empty( $replace_form ) ) {
-					add_filter( 'static_page_replace_urls_in_content', function( $contents ) use ( $replace_form, $replace_to ) {
-						return str_replace( $replace_form, $replace_to, $contents );
+				if ( ! empty( $replace_from ) ) {
+					add_filter( 'static_page_replace_urls_in_content', function( $contents ) use ( $replace_from, $replace_to ) {
+						return str_replace( $replace_from, $replace_to, $contents );
 					});
 				}
 
