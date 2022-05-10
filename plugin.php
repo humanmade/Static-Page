@@ -246,9 +246,21 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 
 	$path = apply_filters( 'static_content_dir_path', $path, $option_args );
 
-	if ( empty( $contents ) ) {
+	/**
+	*
+	* @param bool  $empty_content_not_allowed Empty content allowed for NetStorage Upload
+	* @param array $option_args {
+	*    post_id int Post ID
+	*    post_type string Post type
+	*    file_path string S3 file path
+	* }
+	*/
+	$empty_content_not_allowed = apply_filters( 'static_page_empty_content_not_allowed', true, $option_args );
+
+	if ( $empty_content_not_allowed && empty( $contents ) ) {
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
+
 
 	$post_type = $option_args['post_type'] ?? null;
 	$file      = $option_args['file_path'] ?? null;
