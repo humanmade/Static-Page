@@ -167,7 +167,14 @@ function get_url_contents( $url, $config = null, $post_id = null ) {
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
 
-	if ( 'netstorage-file' === get_post_type( $post_id ) ) {
+	/**
+	*
+	* @param bool  $allow_empty_content Empty content allowed for NetStorage Upload
+	* @param array $post_id             Post ID
+	*/
+	$allow_empty_content = apply_filters( 'static_page_allow_empty_content', false, $post_id );
+
+	if ( $allow_empty_content ) {
 		$content = '';
 	} else {
 		$response = wp_remote_get( $url, $args );
