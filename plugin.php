@@ -272,8 +272,7 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 	$file      = $option_args['file_path'] ?? null;
 	$ext       = pathinfo( $file, PATHINFO_EXTENSION );
 
-	// `copy` the file if it's a netstorage-file post type and it's not a ZIP file.
-	if ( 'netstorage-file' === $post_type && $ext !== 'zip' ) {
+	if ( ! $empty_content_not_allowed && $ext !== 'zip' ) {
 		copy( $file, $path );
 	} else {
 		file_put_contents( $path, $contents );
