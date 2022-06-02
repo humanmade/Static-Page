@@ -255,16 +255,12 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 
 	/**
 	*
-	* @param bool  $empty_content_not_allowed Empty content allowed for NetStorage Upload
-	* @param array $option_args {
-	*    post_id int Post ID
-	*    post_type string Post type
-	*    file_path string S3 file path
-	* }
+	* @param bool  $allow_empty_content Empty content allowed for NetStorage Upload
+	* @param array $post_id             Post ID
 	*/
-	$empty_content_not_allowed = apply_filters( 'static_page_empty_content_not_allowed', true, $option_args );
+	$allow_empty_content = apply_filters( 'static_page_allow_empty_content', false, $option_args['post_id'] );
 
-	if ( $empty_content_not_allowed && empty( $contents ) ) {
+	if ( ! $allow_empty_content && empty( $contents ) ) {
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
@@ -272,7 +268,7 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 	$file      = $option_args['file_path'] ?? null;
 	$ext       = pathinfo( $file, PATHINFO_EXTENSION );
 
-	if ( ! $empty_content_not_allowed && $ext !== 'zip' ) {
+	if ( $allow_empty_content && $ext !== 'zip' ) {
 		copy( $file, $path );
 	} else {
 		file_put_contents( $path, $contents );
