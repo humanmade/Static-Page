@@ -264,7 +264,6 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
-	$post_type = $option_args['post_type'] ?? null;
 	$file      = $option_args['file_path'] ?? null;
 	$ext       = pathinfo( $file, PATHINFO_EXTENSION );
 
