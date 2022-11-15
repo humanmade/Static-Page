@@ -158,13 +158,27 @@ function get_site_urls( $config = null ) {
 /**
  * Get the page contents of a URL.
  *
- * @param  string $url
+ * @param  string $url     URL to get the content from.
  * @param  mixed  $config  Option config object that will be passed to filters etc.
  * @param  int    $post_id Current Post ID.
  * @return string|WP_Error URL contents on success, error object otherwise.
  */
 function get_url_contents( $url, $config = null, $post_id = null ) {
-	// for now we just do a loop back
+	if ( extension_loaded( 'pcntl' ) && defined( 'WP_CLI' ) ) {
+		return get_url_with_template_loader( $url );
+	}
+	return get_url_with_remote_request( $url, $config );
+}
+
+/**
+ * Fetch Content with Remote Request
+ *
+ * @param  string $url
+ * @param  mixed  $config  Option config object that will be passed to filters etc.
+ *
+ * @return string|WP_Error URL contents on success, error object otherwise.
+ */
+function get_url_with_remote_request( $url, $config = null ) {
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
 
@@ -198,9 +212,96 @@ function get_url_contents( $url, $config = null, $post_id = null ) {
 	return $content;
 }
 
+/**
+ * Get the page contents of a URL.
+ *
+ * @param  string $url     URL to get the content from.
+ * @param  mixed  $config  Option config object that will be passed to filters etc.
+ * @return string|WP_Error URL contents on success, error object otherwise.
+ */
+function get_url_with_template_loader( $url, $config = null ) {
+	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
+
+	$_GET = $_POST = array();
+
+	foreach ( array( 'query_string', 'id', 'postdata', 'authordata', 'day', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages', 'pagenow') as $v) {
+		if ( isset( $GLOBALS[$v] ) ) unset( $GLOBALS[$v] );
+	}
+
+	$parts = parse_url($url);
+
+	if ( isset( $parts['scheme'] ) ) {
+		$req = $parts['path'];
+		if ( isset( $parts['query'] ) ) {
+			$req .= '?' . $parts['query'];
+			// parse the url query vars into $_GET
+			parse_str( $parts['query'], $_GET );
+		}
+	} else {
+		$req = $url;
+	}
+
+	if ( ! isset( $parts['query'] ) ) {
+		$parts['query'] = '';
+	}
+
+	$_SERVER['REQUEST_URI'] = $req;
+	unset( $_SERVER['PATH_INFO'] );
+
+	unset( $GLOBALS['wp_query'], $GLOBALS['wp_the_query'] );
+
+	$GLOBALS['wp_the_query'] = new \WP_Query();
+	$GLOBALS['wp_query']     = $GLOBALS['wp_the_query'];
+	$GLOBALS['wp']           = new \WP();
+	_cleanup_query_vars();
+
+	$GLOBALS['wp']->main( $parts['query'] );
+
+	if ( ! defined( 'WP_USE_THEMES' ) ) {
+		define( 'WP_USE_THEMES', true );
+	}
+
+	remove_action( 'template_redirect', 'redirect_canonical' );
+
+	ob_start();
+	require ABSPATH . WPINC . '/template-loader.php';
+	return ob_get_clean();
+}
+
+/**
+ * Clean up global query vars.
+ *
+ * @return void
+ */
+function _cleanup_query_vars() {
+	// clean out globals to stop them polluting wp and wp_query
+	foreach ( $GLOBALS['wp']->public_query_vars as $v )
+		unset( $GLOBALS[$v] );
+
+	foreach ( $GLOBALS['wp']->private_query_vars as $v )
+		unset( $GLOBALS[$v] );
+
+	foreach ( get_taxonomies( array() , 'objects' ) as $t ) {
+		if ( ! empty( $t->query_var ) )
+			$GLOBALS['wp']->add_query_var( $t->query_var );
+	}
+
+	foreach ( get_post_types( array() , 'objects' ) as $t ) {
+		if ( ! empty( $t->query_var ) )
+			$GLOBALS['wp']->add_query_var( $t->query_var );
+	}
+}
+
+/**
+ * Replace urls inside the content.
+ *
+ * @param string $content HTML Content.
+ * @param mixed $config Option config object that will be passed to filters etc.
+ *
+ * @return mixed|void
+ */
 function replace_urls( $content, $config = null ) {
-	$content = apply_filters( 'static_page_replace_urls_in_content', $content, $config );
-	return $content;
+	return apply_filters( 'static_page_replace_urls_in_content', $content, $config );
 }
 
 /**
