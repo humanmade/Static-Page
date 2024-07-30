@@ -198,8 +198,8 @@ function get_url_contents( $url, $config = null, $post_id = null ) {
 	return $content;
 }
 
-function replace_urls( $content, $config = null ) {
-	$content = apply_filters( 'static_page_replace_urls_in_content', $content, $config );
+function replace_urls( $content, $config = null, $post_id = null ) {
+	$content = apply_filters( 'static_page_replace_urls_in_content', $content, $config, $post_id );
 	return $content;
 }
 
