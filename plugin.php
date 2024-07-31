@@ -167,35 +167,21 @@ function get_url_contents( $url, $config = null, $post_id = null ) {
 	// for now we just do a loop back
 	$url = apply_filters( 'static_page_get_url_contents_request_url', $url, $config );
 	$args = apply_filters( 'static_page_get_url_contents_request_args', array(), $config );
-
-	/**
-	*
-	* @param bool  $allow_empty_content Empty content allowed for NetStorage Upload
-	* @param array $post_id             Post ID
-	*/
-	$allow_empty_content = apply_filters( 'static_page_allow_empty_content', false, $post_id );
-
-	if ( $allow_empty_content ) {
-		$content = '';
-	} else {
-		$response = wp_remote_get( $url, $args );
-		if ( is_wp_error( $response ) ) {
-			return $response;
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		if ( $code !== 200 ) {
-			return new WP_Error(
-				'static-page.get_url_contents.non_200',
-				sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
-				[ 'response' => $response ]
-			);
-		}
-
-		$content = wp_remote_retrieve_body( $response );
+	$response = wp_remote_get( $url, $args );
+	if ( is_wp_error( $response ) ) {
+		return $response;
 	}
 
-	return $content;
+	$code = wp_remote_retrieve_response_code( $response );
+	if ( $code !== 200 ) {
+		return new WP_Error(
+			'static-page.get_url_contents.non_200',
+			sprintf( __( 'Non-200 response (%1$d) returned from %2$s', 'static-page' ), $code, $url ),
+			[ 'response' => $response ]
+		);
+	}
+
+	return wp_remote_retrieve_body( $response );
 }
 
 function replace_urls( $content, $config = null, $post_id = null ) {
@@ -254,25 +240,11 @@ function save_contents_for_url( $contents, $url, $config = null, $option_args = 
 
 	$path = apply_filters( 'static_content_dir_path', $path, $option_args );
 
-	/**
-	*
-	* @param bool  $allow_empty_content Empty content allowed for NetStorage Upload
-	* @param array $post_id             Post ID
-	*/
-	$allow_empty_content = apply_filters( 'static_page_allow_empty_content', false, $option_args['post_id'] );
-
-	if ( ! $allow_empty_content && empty( $contents ) ) {
+	if ( empty( $contents ) ) {
 		trigger_error( sprintf( 'Writing to %s with empty content', $url ), E_USER_WARNING );
 	}
 
-	$file      = $option_args['file_path'] ?? null;
-	$ext       = pathinfo( $file, PATHINFO_EXTENSION );
-
-	if ( $allow_empty_content && $ext !== 'zip' ) {
-		copy( $file, $path );
-	} else {
-		file_put_contents( $path, $contents );
-	}
+	file_put_contents( $path, $contents );
 
 	remove_filter( 's3_uploads_putObject_params', $func );
 
